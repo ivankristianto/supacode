@@ -68,6 +68,7 @@ struct ContentView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .focusedSceneValue(\.toggleSidebarAction, toggleSidebar)
     }
 
     private func toggleSidebar() {

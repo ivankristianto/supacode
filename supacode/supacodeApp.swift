@@ -50,6 +50,7 @@ struct supacodeApp: App {
         .environment(repositoryStore)
         .commands {
             OpenRepositoryCommands(repositoryStore: repositoryStore)
+            SidebarCommands()
             TerminalCommands()
         }
         Settings {
