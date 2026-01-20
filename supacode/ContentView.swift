@@ -12,11 +12,11 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     let runtime: GhosttyRuntime
     @Environment(RepositoryStore.self) private var repositoryStore
-    @State private var terminalStore: GhosttyTerminalStore
+    @State private var terminalStore: WorktreeTerminalStore
 
     init(runtime: GhosttyRuntime) {
         self.runtime = runtime
-        _terminalStore = State(initialValue: GhosttyTerminalStore(runtime: runtime))
+        _terminalStore = State(initialValue: WorktreeTerminalStore(runtime: runtime))
     }
 
     var body: some View {
@@ -27,14 +27,9 @@ struct ContentView: View {
         } detail: {
             Group {
                 if let selectedWorktree {
-                    GhosttyTerminalView(
-                        surfaceView: terminalStore.surfaceView(
-                            for: selectedWorktree.id,
-                            workingDirectory: selectedWorktree.workingDirectory
-                        )
-                    )
-                    .id(selectedWorktree.id)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    WorktreeTerminalTabsView(worktree: selectedWorktree, store: terminalStore)
+                        .id(selectedWorktree.id)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     EmptyStateView()
                 }
@@ -49,6 +44,15 @@ struct ContentView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .onChange(of: repositoryStore.repositories) { _, newValue in
+            var worktreeIDs: Set<Worktree.ID> = []
+            for repository in newValue {
+                for worktree in repository.worktrees {
+                    worktreeIDs.insert(worktree.id)
+                }
+            }
+            terminalStore.prune(keeping: worktreeIDs)
+        }
         .fileImporter(
             isPresented: $repositoryStore.isOpenPanelPresented,
             allowedContentTypes: [.folder],

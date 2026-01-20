@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D61414532F1F9799007DF542 /* Bonsplit in Frameworks */ = {isa = PBXBuildFile; productRef = D61414522F1F9799007DF542 /* Bonsplit */; };
 		D6A1CB312F1F4ABF004FDABD /* GhosttyKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D6A1CB2F2F1F4A48004FDABD /* GhosttyKit.xcframework */; };
 		D6A1CB362F1F4ACB004FDABD /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D6A1CB342F1F4AC2004FDABD /* Carbon.framework */; };
 		D6A1CB3A2F1F4B00004FDABD /* ghostty in Resources */ = {isa = PBXBuildFile; fileRef = D6A1CB392F1F4B00004FDABD /* ghostty */; };
@@ -33,6 +34,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D6A1CB312F1F4ABF004FDABD /* GhosttyKit.xcframework in Frameworks */,
+				D61414532F1F9799007DF542 /* Bonsplit in Frameworks */,
 				D6A1CB362F1F4ACB004FDABD /* Carbon.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -87,6 +89,7 @@
 			);
 			name = supacode;
 			packageProductDependencies = (
+				D61414522F1F9799007DF542 /* Bonsplit */,
 			);
 			productName = supacode;
 			productReference = D69CE04A2F1F378200584C57 /* supacode.app */;
@@ -116,6 +119,9 @@
 			);
 			mainGroup = D69CE0412F1F378200584C57;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D61414512F1F9799007DF542 /* XCRemoteSwiftPackageReference "bonsplit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D69CE04B2F1F378200584C57 /* Products */;
 			projectDirPath = "";
@@ -386,6 +392,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D61414512F1F9799007DF542 /* XCRemoteSwiftPackageReference "bonsplit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/almonk/bonsplit.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D61414522F1F9799007DF542 /* Bonsplit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D61414512F1F9799007DF542 /* XCRemoteSwiftPackageReference "bonsplit" */;
+			productName = Bonsplit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D69CE0422F1F378200584C57 /* Project object */;
 }
