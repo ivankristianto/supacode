@@ -16,7 +16,8 @@ jobs:
     permissions:
       contents: write
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.SUPACODE_SH_RELEASE_TOKEN }}
+      RELEASE_REPO: supabit/supacode-sh
       SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
       DEVELOPER_ID_CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
       DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
@@ -130,13 +131,13 @@ jobs:
       - run: |
           STAGING=$(mktemp -d)
           cp build/supacode.app.zip "$STAGING/"
-          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/" --ed-key-file - "$STAGING"
+          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://github.com/$RELEASE_REPO/releases/download/$TAG/" --ed-key-file - "$STAGING"
           cp "$STAGING/appcast.xml" build/appcast.xml
       - run: |
           NOTES_FILE=build/release-notes.txt
           printf "" > "$NOTES_FILE"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" build/supacode.app.zip build/appcast.xml --clobber
+          if gh release view "$TAG" -R "$RELEASE_REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" build/supacode.app.zip build/appcast.xml --clobber -R "$RELEASE_REPO"
           else
-            gh release create "$TAG" build/supacode.app.zip build/appcast.xml --title "$TAG" --notes-file "$NOTES_FILE"
+            gh release create "$TAG" build/supacode.app.zip build/appcast.xml --title "$TAG" --notes-file "$NOTES_FILE" -R "$RELEASE_REPO"
           fi
