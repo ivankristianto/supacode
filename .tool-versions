@@ -1,2 +1,3 @@
-zig       0.15.2
-swiftlint latest
+zig                       0.15.2
+swiftlint                 latest
+github:ldomaradzki/xcsift latest
