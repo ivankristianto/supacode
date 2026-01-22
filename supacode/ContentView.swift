@@ -489,6 +489,7 @@ private struct RepositorySectionView: View {
         .disabled(isRemovingRepository)
       }
       .padding()
+      .padding(.bottom, 6)
     }
   }
 }
