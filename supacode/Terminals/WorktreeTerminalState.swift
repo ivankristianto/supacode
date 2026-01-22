@@ -239,6 +239,14 @@ final class WorktreeTerminalState: BonsplitDelegate {
       guard let self, let view else { return false }
       return self.performSplitAction(action, for: view.id)
     }
+    view.bridge.onNewTab = { [weak self, weak view] in
+      guard let self, let view else { return false }
+      return self.handleNewTabRequest(from: view)
+    }
+    view.bridge.onCloseRequest = { [weak self, weak view] processAlive in
+      guard let self, let view else { return }
+      self.handleCloseRequest(for: view, processAlive: processAlive)
+    }
     view.onFocusChange = { [weak self, weak view] focused in
       guard let self, let view else { return }
       guard focused else { return }
@@ -327,6 +335,42 @@ final class WorktreeTerminalState: BonsplitDelegate {
     case .down:
       return .down
     }
+  }
+
+  private func handleCloseRequest(for view: GhosttySurfaceView, processAlive: Bool) {
+    guard surfaces[view.id] != nil else { return }
+    guard let tabId = tabId(containing: view.id), let tree = trees[tabId] else {
+      view.closeSurface()
+      surfaces.removeValue(forKey: view.id)
+      return
+    }
+    guard let node = tree.find(id: view.id) else {
+      view.closeSurface()
+      surfaces.removeValue(forKey: view.id)
+      return
+    }
+    let newTree = tree.removing(node)
+    view.closeSurface()
+    surfaces.removeValue(forKey: view.id)
+    if newTree.isEmpty {
+      trees.removeValue(forKey: tabId)
+      focusedSurfaceIdByTab.removeValue(forKey: tabId)
+      controller.closeTab(tabId)
+      return
+    }
+    trees[tabId] = newTree
+    if focusedSurfaceIdByTab[tabId] == view.id {
+      if let nextSurface = newTree.root?.leftmostLeaf() {
+        focusSurface(nextSurface, in: tabId)
+      } else {
+        focusedSurfaceIdByTab.removeValue(forKey: tabId)
+      }
+    }
+  }
+
+  private func handleNewTabRequest(from view: GhosttySurfaceView) -> Bool {
+    let paneId = controller.focusedPaneId
+    return createTab(in: paneId) != nil
   }
 
   private func mapDropZone(_ zone: TerminalSplitTreeView.DropZone)

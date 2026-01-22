@@ -8,8 +8,11 @@ final class GhosttySurfaceBridge {
   weak var surfaceView: GhosttySurfaceView?
   var onTitleChange: ((String) -> Void)?
   var onSplitAction: ((GhosttySplitAction) -> Bool)?
+  var onCloseRequest: ((Bool) -> Void)?
+  var onNewTab: (() -> Bool)?
 
   func handleAction(target: ghostty_target_s, action: ghostty_action_s) -> Bool {
+    if let handled = handleAppAction(action) { return handled }
     if let handled = handleSplitAction(action) { return handled }
     if handleTitleAndPath(action) { return false }
     if handleCommandStatus(action) { return false }
@@ -32,8 +35,17 @@ final class GhosttySurfaceBridge {
     sendText(finalCommand)
   }
 
-  func closeSurface() {
-    surfaceView?.closeSurface()
+  func closeSurface(processAlive: Bool) {
+    onCloseRequest?(processAlive)
+  }
+
+  private func handleAppAction(_ action: ghostty_action_s) -> Bool? {
+    switch action.tag {
+    case GHOSTTY_ACTION_NEW_TAB:
+      return onNewTab?() ?? false
+    default:
+      return nil
+    }
   }
 
   private func handleSplitAction(_ action: ghostty_action_s) -> Bool? {
@@ -185,10 +197,12 @@ final class GhosttySurfaceBridge {
     switch action.tag {
     case GHOSTTY_ACTION_MOUSE_SHAPE:
       state.mouseShape = action.action.mouse_shape
+      surfaceView?.setMouseShape(action.action.mouse_shape)
       return true
 
     case GHOSTTY_ACTION_MOUSE_VISIBILITY:
       state.mouseVisibility = action.action.mouse_visibility
+      surfaceView?.setMouseVisibility(action.action.mouse_visibility == GHOSTTY_MOUSE_VISIBLE)
       return true
 
     case GHOSTTY_ACTION_MOUSE_OVER_LINK:

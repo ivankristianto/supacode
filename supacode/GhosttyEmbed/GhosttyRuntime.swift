@@ -67,6 +67,15 @@ final class GhosttyRuntime {
       ) { [weak self] _ in
         self?.setAppFocus(false)
       })
+    observers.append(
+      center.addObserver(
+        forName: NSTextInputContext.keyboardSelectionDidChangeNotification,
+        object: nil,
+        queue: .main
+      ) { [weak self] _ in
+        guard let app = self?.app else { return }
+        ghostty_app_keyboard_changed(app)
+      })
   }
 
   deinit {
@@ -200,7 +209,7 @@ final class GhosttyRuntime {
 
   private static func closeSurface(_ userdata: UnsafeMutableRawPointer?, processAlive: Bool) {
     guard let bridge = surfaceBridge(fromUserdata: userdata) else { return }
-    bridge.closeSurface()
+    bridge.closeSurface(processAlive: processAlive)
   }
 }
 

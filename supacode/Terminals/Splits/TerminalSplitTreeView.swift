@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -6,6 +7,18 @@ struct TerminalSplitTreeView: View {
   let action: (Operation) -> Void
 
   private static let dragType = UTType(exportedAs: "build.conductor.ghostty.surface-id")
+  private static func dragProvider(for surfaceView: GhosttySurfaceView) -> NSItemProvider {
+    let provider = NSItemProvider()
+    let data = surfaceView.id.uuidString.data(using: .utf8) ?? Data()
+    provider.registerDataRepresentation(
+      forTypeIdentifier: dragType.identifier,
+      visibility: .all
+    ) { completion in
+      completion(data, nil)
+      return nil
+    }
+    return provider
+  }
 
   var body: some View {
     if let node = tree.zoomed ?? tree.root {
@@ -28,7 +41,7 @@ struct TerminalSplitTreeView: View {
     var body: some View {
       switch node {
       case .leaf(let leafView):
-        LeafView(surfaceView: leafView, action: action)
+        LeafView(surfaceView: leafView, isSplit: !isRoot, action: action)
       case .split(let split):
         let splitViewDirection: SplitView<SubtreeView, SubtreeView>.Direction =
           switch split.direction {
@@ -62,6 +75,7 @@ struct TerminalSplitTreeView: View {
 
   struct LeafView: View {
     let surfaceView: GhosttySurfaceView
+    let isSplit: Bool
     let action: (Operation) -> Void
 
     @State private var dropState: DropState = .idle
@@ -70,6 +84,11 @@ struct TerminalSplitTreeView: View {
       GeometryReader { geometry in
         GhosttyTerminalView(surfaceView: surfaceView)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .overlay(alignment: .top) {
+            if isSplit {
+              DragHandle(surfaceView: surfaceView)
+            }
+          }
           .background {
             Color.clear
               .contentShape(.rect)
@@ -88,21 +107,48 @@ struct TerminalSplitTreeView: View {
                 .allowsHitTesting(false)
             }
           }
-          .onDrag {
-            let provider = NSItemProvider()
-            let data = surfaceView.id.uuidString.data(using: .utf8) ?? Data()
-            provider.registerDataRepresentation(
-              forTypeIdentifier: TerminalSplitTreeView.dragType.identifier,
-              visibility: .all
-            ) { completion in
-              completion(data, nil)
-              return nil
-            }
-            return provider
-          }
       }
     }
 
+  }
+
+  struct DragHandle: View {
+    let surfaceView: GhosttySurfaceView
+    private let handleHeight: CGFloat = 10
+    @State private var isHovering = false
+
+    var body: some View {
+      Rectangle()
+        .fill(Color.primary.opacity(isHovering ? 0.12 : 0))
+        .frame(maxWidth: .infinity)
+        .frame(height: handleHeight)
+        .overlay {
+          if isHovering {
+            Image(systemName: "ellipsis")
+              .font(.system(size: 14, weight: .semibold))
+              .foregroundStyle(.primary.opacity(0.5))
+          }
+        }
+        .contentShape(.rect)
+        .onHover { hovering in
+          guard hovering != isHovering else { return }
+          isHovering = hovering
+          if hovering {
+            NSCursor.openHand.push()
+          } else {
+            NSCursor.pop()
+          }
+        }
+        .onDisappear {
+          if isHovering {
+            isHovering = false
+            NSCursor.pop()
+          }
+        }
+        .onDrag {
+          TerminalSplitTreeView.dragProvider(for: surfaceView)
+        }
+    }
   }
 
   enum DropState: Equatable {
