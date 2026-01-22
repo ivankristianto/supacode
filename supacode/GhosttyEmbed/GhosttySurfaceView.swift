@@ -1,8 +1,9 @@
 import AppKit
 import GhosttyKit
 
-final class GhosttySurfaceView: NSView {
+final class GhosttySurfaceView: NSView, Identifiable {
   private let runtime: GhosttyRuntime
+  let id = UUID()
   let bridge: GhosttySurfaceBridge
   private(set) var surface: ghostty_surface_t?
   private let workingDirectoryCString: UnsafeMutablePointer<CChar>?
@@ -10,6 +11,8 @@ final class GhosttySurfaceView: NSView {
   private var trackingArea: NSTrackingArea?
   private var lastBackingSize: CGSize = .zero
   private var pendingFocus = false
+  private var currentCursor: NSCursor = .iBeam
+  var onFocusChange: ((Bool) -> Void)?
 
   override var acceptsFirstResponder: Bool { true }
 
@@ -90,10 +93,15 @@ final class GhosttySurfaceView: NSView {
     trackingArea = area
   }
 
+  override func resetCursorRects() {
+    addCursorRect(bounds, cursor: currentCursor)
+  }
+
   override func becomeFirstResponder() -> Bool {
     let result = super.becomeFirstResponder()
     if result {
       setSurfaceFocus(true)
+      onFocusChange?(true)
     }
     return result
   }
@@ -102,6 +110,7 @@ final class GhosttySurfaceView: NSView {
     let result = super.resignFirstResponder()
     if result {
       setSurfaceFocus(false)
+      onFocusChange?(false)
     }
     return result
   }
@@ -213,6 +222,49 @@ final class GhosttySurfaceView: NSView {
     ghostty_surface_set_size(surface, width, height)
   }
 
+  func setMouseShape(_ shape: ghostty_action_mouse_shape_e) {
+    let newCursor: NSCursor? = switch shape {
+    case GHOSTTY_MOUSE_SHAPE_DEFAULT:
+      .arrow
+    case GHOSTTY_MOUSE_SHAPE_TEXT:
+      .iBeam
+    case GHOSTTY_MOUSE_SHAPE_GRAB:
+      .openHand
+    case GHOSTTY_MOUSE_SHAPE_GRABBING:
+      .closedHand
+    case GHOSTTY_MOUSE_SHAPE_POINTER:
+      .pointingHand
+    case GHOSTTY_MOUSE_SHAPE_COL_RESIZE:
+      .resizeLeftRight
+    case GHOSTTY_MOUSE_SHAPE_ROW_RESIZE:
+      .resizeUpDown
+    case GHOSTTY_MOUSE_SHAPE_W_RESIZE, GHOSTTY_MOUSE_SHAPE_E_RESIZE,
+      GHOSTTY_MOUSE_SHAPE_EW_RESIZE:
+      .resizeLeftRight
+    case GHOSTTY_MOUSE_SHAPE_N_RESIZE, GHOSTTY_MOUSE_SHAPE_S_RESIZE,
+      GHOSTTY_MOUSE_SHAPE_NS_RESIZE:
+      .resizeUpDown
+    case GHOSTTY_MOUSE_SHAPE_VERTICAL_TEXT:
+      .iBeamCursorForVerticalLayout
+    case GHOSTTY_MOUSE_SHAPE_CONTEXT_MENU:
+      .contextualMenu
+    case GHOSTTY_MOUSE_SHAPE_CROSSHAIR:
+      .crosshair
+    case GHOSTTY_MOUSE_SHAPE_NOT_ALLOWED:
+      .operationNotAllowed
+    default:
+      nil
+    }
+    guard let newCursor else { return }
+    guard newCursor != currentCursor else { return }
+    currentCursor = newCursor
+    window?.invalidateCursorRects(for: self)
+  }
+
+  func setMouseVisibility(_ visible: Bool) {
+    NSCursor.setHiddenUntilMouseMoves(!visible)
+  }
+
   private func createSurface() {
     guard let app = runtime.app else { return }
     var config = ghostty_surface_config_new()
@@ -275,12 +327,6 @@ final class GhosttySurfaceView: NSView {
         return ghostty_surface_key_is_binding(surface, key, &flags)
       }
       if isBinding {
-        if shouldForwardMenu(flags),
-          let menu = NSApp.mainMenu,
-          menu.performKeyEquivalent(with: event)
-        {
-          return true
-        }
         return text.withCString { ptr in
           key.text = ptr
           return ghostty_surface_key(surface, key)
@@ -290,12 +336,6 @@ final class GhosttySurfaceView: NSView {
       var flags = ghostty_binding_flags_e(0)
       key.text = nil
       if ghostty_surface_key_is_binding(surface, key, &flags) {
-        if shouldForwardMenu(flags),
-          let menu = NSApp.mainMenu,
-          menu.performKeyEquivalent(with: event)
-        {
-          return true
-        }
         return ghostty_surface_key(surface, key)
       }
     }
@@ -345,14 +385,6 @@ final class GhosttySurfaceView: NSView {
     }
 
     return false
-  }
-
-  private func shouldForwardMenu(_ flags: ghostty_binding_flags_e) -> Bool {
-    let rawValue = flags.rawValue
-    let consumed = rawValue & GHOSTTY_BINDING_FLAGS_CONSUMED.rawValue != 0
-    let all = rawValue & GHOSTTY_BINDING_FLAGS_ALL.rawValue != 0
-    let performable = rawValue & GHOSTTY_BINDING_FLAGS_PERFORMABLE.rawValue != 0
-    return consumed && !all && !performable
   }
 
   @IBAction func copy(_ sender: Any?) {
