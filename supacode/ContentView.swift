@@ -220,6 +220,13 @@ private struct WorktreeDetailView: View {
         terminalStore.closeFocusedTab(in: selectedWorktree)
       }
     )
+    .focusedSceneValue(
+      \.closeSurfaceAction,
+      {
+        guard let selectedWorktree else { return }
+        terminalStore.closeFocusedSurface(in: selectedWorktree)
+      }
+    )
   }
 
   private func performOpenAction(_ action: OpenWorktreeAction) {
@@ -686,7 +693,7 @@ private struct EmptyStateView: View {
       Image(systemName: "tray")
         .font(.title2)
         .accessibilityHidden(true)
-      Text("Open a project or worktree")
+      Text("Open a git repository")
         .font(.headline)
       Text(
         "Press \(AppShortcuts.openRepository.display) "
@@ -697,6 +704,10 @@ private struct EmptyStateView: View {
       Button("Open Repository...") {
         repositoryStore.isOpenPanelPresented = true
       }
+      .keyboardShortcut(
+        AppShortcuts.openRepository.keyEquivalent,
+        modifiers: AppShortcuts.openRepository.modifiers
+      )
       .help("Open Repository (\(AppShortcuts.openRepository.display))")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
