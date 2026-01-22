@@ -5,6 +5,7 @@
 //  Created by khoi on 20/1/26.
 //
 
+import Foundation
 import GhosttyKit
 import SwiftUI
 
@@ -61,6 +62,15 @@ struct SupacodeApp: App {
       SidebarCommands()
       TerminalCommands()
       UpdateCommands(updateController: updateController)
+    }
+    WindowGroup("Repo Settings", id: WindowIdentifiers.repoSettings, for: Repository.ID.self) { $repositoryID in
+      if let repositoryID {
+        RepositorySettingsView(repositoryRootURL: URL(fileURLWithPath: repositoryID))
+      } else {
+        Text("Select a repository to edit settings.")
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .scenePadding()
+      }
     }
     Settings {
       SettingsView()
