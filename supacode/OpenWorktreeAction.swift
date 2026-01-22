@@ -23,10 +23,12 @@ enum OpenWorktreeAction: CaseIterable, Identifiable {
     return NSWorkspace.shared.icon(forFile: appURL.path)
   }
 
-  var shortcut: AppShortcut? {
+  var settingsID: String {
     switch self {
-    case .finder: AppShortcuts.openFinder
-    case .cursor, .zed, .ghostty: nil
+    case .finder: "finder"
+    case .cursor: "cursor"
+    case .zed: "zed"
+    case .ghostty: "ghostty"
     }
   }
 
@@ -39,11 +41,14 @@ enum OpenWorktreeAction: CaseIterable, Identifiable {
     }
   }
 
-  var helpText: String {
-    if let shortcut {
-      return "\(title) (\(shortcut.display))"
+  static func fromSettingsID(_ settingsID: String?) -> OpenWorktreeAction {
+    switch settingsID {
+    case OpenWorktreeAction.finder.settingsID: .finder
+    case OpenWorktreeAction.cursor.settingsID: .cursor
+    case OpenWorktreeAction.zed.settingsID: .zed
+    case OpenWorktreeAction.ghostty.settingsID: .ghostty
+    default: .finder
     }
-    return title
   }
 
   func perform(with worktree: Worktree, onError: @escaping (OpenActionError) -> Void) {

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>SUFeedURL</key>
-    <string>https://supacode.sh/appcast/appcast.xml</string>
+    <string>https://supacode.sh/download/latest/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>eBdTbl+6sR8gxO1zyzyvdQHuJrXMLxD31oCc+JoW5jo=</string>
 </dict>

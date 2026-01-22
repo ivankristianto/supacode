@@ -142,6 +142,8 @@ private struct WorktreeDetailView: View {
   let terminalStore: WorktreeTerminalStore
   let toggleSidebar: () -> Void
   @State private var openActionError: OpenActionError?
+  @State private var openActionSelection: OpenWorktreeAction = .finder
+  private let settingsStore = RepositorySettingsStore()
 
   var body: some View {
     Group {
@@ -158,32 +160,58 @@ private struct WorktreeDetailView: View {
     .navigationTitle(selectedWorktree?.name ?? loadingInfo?.name ?? "Supacode")
     .toolbar {
       let isOpenDisabled = selectedWorktree == nil || loadingInfo != nil
-      ToolbarItemGroup(placement: .primaryAction) {
-        Menu {
-          ForEach(OpenWorktreeAction.allCases) { action in
-            Button {
-              performOpenAction(action)
-            } label: {
-              if let appIcon = action.appIcon {
-                Label {
-                  Text(action.title)
-                } icon: {
-                  Image(nsImage: appIcon)
-                    .accessibilityHidden(true)
+      let openActionHelpText =
+        "\(openActionSelection.title) (\(AppShortcuts.openFinder.display))"
+      if !isOpenDisabled {
+        ToolbarItemGroup(placement: .primaryAction) {
+          Menu {
+            ForEach(OpenWorktreeAction.allCases) { action in
+              let isDefault = action == openActionSelection
+              Button {
+                setOpenActionSelection(action)
+                performOpenAction(action)
+              } label: {
+                if let appIcon = action.appIcon {
+                  Label {
+                    Text(action.title)
+                  } icon: {
+                    Image(nsImage: appIcon)
+                      .accessibilityHidden(true)
+                  }
+                } else {
+                  Label(action.title, systemImage: "app")
                 }
+              }
+              .modifier(
+                OpenActionShortcutModifier(
+                  shortcut: isDefault ? AppShortcuts.openFinder : nil
+                )
+              )
+              .help(
+                isDefault
+                  ? "\(action.title) (\(AppShortcuts.openFinder.display))"
+                  : action.title
+              )
+            }
+          } label: {
+            Label {
+              Text("Open")
+            } icon: {
+              if let appIcon = openActionSelection.appIcon {
+                Image(nsImage: appIcon)
+                  .resizable()
+                  .scaledToFit()
+                  .accessibilityHidden(true)
               } else {
-                Label(action.title, systemImage: "app")
+                Image(systemName: "folder")
+                  .resizable()
+                  .scaledToFit()
+                  .accessibilityHidden(true)
               }
             }
-            .modifier(OpenActionShortcutModifier(shortcut: action.shortcut))
-            .help(action.helpText)
-            .disabled(isOpenDisabled)
           }
-        } label: {
-          Label("Open", systemImage: "folder")
+          .help(openActionHelpText)
         }
-        .help("Open Finder (\(AppShortcuts.openFinder.display))")
-        .disabled(isOpenDisabled)
       }
     }
     .alert(item: $openActionError) { error in
@@ -192,6 +220,12 @@ private struct WorktreeDetailView: View {
         message: Text(error.message),
         dismissButton: .default(Text("OK"))
       )
+    }
+    .onAppear {
+      loadOpenActionSelection()
+    }
+    .onChange(of: selectedWorktree?.repositoryRootURL) { _, _ in
+      loadOpenActionSelection()
     }
     .focusedSceneValue(
       \.newTerminalAction,
@@ -214,6 +248,23 @@ private struct WorktreeDetailView: View {
     action.perform(with: selectedWorktree) { error in
       openActionError = error
     }
+  }
+
+  private func loadOpenActionSelection() {
+    guard let selectedWorktree else {
+      openActionSelection = .finder
+      return
+    }
+    let settings = settingsStore.load(for: selectedWorktree.repositoryRootURL)
+    openActionSelection = OpenWorktreeAction.fromSettingsID(settings.openActionID)
+  }
+
+  private func setOpenActionSelection(_ action: OpenWorktreeAction) {
+    openActionSelection = action
+    guard let selectedWorktree else { return }
+    var settings = settingsStore.load(for: selectedWorktree.repositoryRootURL)
+    settings.openActionID = action.settingsID
+    settingsStore.save(settings, for: selectedWorktree.repositoryRootURL)
   }
 }
 
@@ -363,10 +414,14 @@ private struct RepositorySectionView: View {
   let onRequestRemoval: (Worktree, Repository) -> Void
   let onRequestRepositoryRemoval: (Repository) -> Void
   @Environment(RepositoryStore.self) private var repositoryStore
+  @Environment(\.openWindow) private var openWindow
 
   var body: some View {
     let isExpanded = expandedRepoIDs.contains(repository.id)
     let isRemovingRepository = repositoryStore.isRemovingRepository(repository)
+    let openRepoSettings = {
+      openWindow(id: WindowIdentifiers.repoSettings, value: repository.id)
+    }
     Section {
       WorktreeRowsView(
         repository: repository,
@@ -395,6 +450,10 @@ private struct RepositorySectionView: View {
         .buttonStyle(.plain)
         .disabled(isRemovingRepository)
         .contextMenu {
+          Button("Repo Settings") {
+            openRepoSettings()
+          }
+          .help("Repo Settings (no shortcut)")
           Button("Remove Repository") {
             onRequestRepositoryRemoval(repository)
           }
@@ -406,6 +465,19 @@ private struct RepositorySectionView: View {
           ProgressView()
             .controlSize(.small)
         }
+        Menu {
+          Button("Repo Settings") {
+            openRepoSettings()
+          }
+          .help("Repo Settings (no shortcut)")
+        } label: {
+          Label("Repository options", systemImage: "ellipsis")
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
+        .help("Repository options (no shortcut)")
+        .disabled(isRemovingRepository)
         Button("New Worktree", systemImage: "plus") {
           createWorktree(repository)
         }

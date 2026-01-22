@@ -10,6 +10,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: release
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: [self-hosted, macOS, ARM64]
@@ -18,7 +22,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_REPO_MAIN: supabitapp/supacode
-      RELEASE_REPO_SH: supabit/supacode-sh
+      RELEASE_REPO_SH: supabitapp/supacode-sh
       SUPACODE_SH_RELEASE_TOKEN: ${{ secrets.SUPACODE_SH_RELEASE_TOKEN }}
       SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
       DEVELOPER_ID_CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
@@ -135,7 +139,7 @@ jobs:
       - run: |
           STAGING=$(mktemp -d)
           cp build/supacode.app.zip "$STAGING/"
-          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://github.com/$RELEASE_REPO_SH/releases/download/$TAG/" --ed-key-file - "$STAGING"
+          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://supabit.sh/download/$TAG/" --ed-key-file - "$STAGING"
           cp "$STAGING/appcast.xml" build/appcast.xml
       - run: |
           NOTES_FILE=build/release-notes.txt

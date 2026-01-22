@@ -10,6 +10,7 @@ final class WorktreeTerminalState: BonsplitDelegate {
   let controller: BonsplitController
   private let runtime: GhosttyRuntime
   private let worktree: Worktree
+  private let settingsStore = RepositorySettingsStore()
   private var trees: [TabID: SplitTree<GhosttySurfaceView>] = [:]
   private var surfaces: [UUID: GhosttySurfaceView] = [:]
   private var focusedSurfaceIdByTab: [TabID: UUID] = [:]
@@ -42,7 +43,6 @@ final class WorktreeTerminalState: BonsplitDelegate {
     {
       let title = "\(worktree.name) \(nextTabIndex())"
       controller.updateTab(tabId, title: title, icon: "terminal")
-      _ = splitTree(for: tabId, initialInput: "echo \(title)\n")
     }
   }
 
@@ -59,7 +59,7 @@ final class WorktreeTerminalState: BonsplitDelegate {
       return nil
     }
     controller.selectTab(tabId)
-    let tree = splitTree(for: tabId, initialInput: "echo \(title)\n")
+    let tree = splitTree(for: tabId, initialInput: startupInput())
     if let surface = tree.root?.leftmostLeaf() {
       focusSurface(surface, in: tabId)
     }
@@ -84,7 +84,7 @@ final class WorktreeTerminalState: BonsplitDelegate {
     if let existing = trees[tabId] {
       return existing
     }
-    let resolvedInput = initialInput ?? defaultInitialInput(for: tabId)
+    let resolvedInput = initialInput ?? defaultInitialInput()
     let surface = createSurface(tabId: tabId, initialInput: resolvedInput)
     let tree = SplitTree(view: surface)
     trees[tabId] = tree
@@ -191,6 +191,20 @@ final class WorktreeTerminalState: BonsplitDelegate {
     case .equalize:
       trees[tabId] = tree.equalized()
     }
+  private func defaultInitialInput() -> String? {
+    startupInput()
+  }
+
+  private func startupInput() -> String? {
+    let settings = settingsStore.load(for: worktree.repositoryRootURL)
+    let command = settings.startupCommand
+    if command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      return nil
+    }
+    if command.hasSuffix("\n") {
+      return command
+    }
+    return "\(command)\n"
   }
 
   func closeAllSurfaces() {
@@ -217,11 +231,6 @@ final class WorktreeTerminalState: BonsplitDelegate {
     if let surface = tree.root?.leftmostLeaf() {
       focusSurface(surface, in: tab.id)
     }
-  }
-
-  private func defaultInitialInput(for tabId: TabID) -> String? {
-    guard let title = controller.tab(tabId)?.title else { return nil }
-    return "echo \(title)\n"
   }
 
   private func createSurface(tabId: TabID, initialInput: String?) -> GhosttySurfaceView {
