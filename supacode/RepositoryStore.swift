@@ -162,6 +162,9 @@ final class RepositoryStore {
       pendingSetupScriptWorktreeIDs.insert(newWorktree.id)
       let roots = repositories.map(\.rootURL)
       let loaded = await reloadRepositories(for: roots)
+      if worktree(for: newWorktree.id) == nil {
+        insertWorktree(newWorktree, into: repository.id)
+      }
       if selectedWorktreeID == pendingID {
         selectedWorktreeID = newWorktree.id
       }
@@ -457,6 +460,24 @@ final class RepositoryStore {
 
   private func removePendingWorktree(id: String) {
     pendingWorktrees.removeAll { $0.id == id }
+  }
+
+  private func insertWorktree(_ worktree: Worktree, into repositoryID: Repository.ID) {
+    guard let index = repositories.firstIndex(where: { $0.id == repositoryID }) else { return }
+    let repository = repositories[index]
+    if repository.worktrees.contains(where: { $0.id == worktree.id }) {
+      return
+    }
+    var worktrees = repository.worktrees
+    worktrees.insert(worktree, at: 0)
+    repositories[index] = Repository(
+      id: repository.id,
+      rootURL: repository.rootURL,
+      name: repository.name,
+      initials: repository.initials,
+      githubOwner: repository.githubOwner,
+      worktrees: worktrees
+    )
   }
 
   private func restoreSelection(_ id: Worktree.ID?, whenSelectionIs pendingID: Worktree.ID) {
