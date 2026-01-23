@@ -12,6 +12,7 @@
 		D6A1CB312F1F4ABF004FDABD /* GhosttyKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D6A1CB2F2F1F4A48004FDABD /* GhosttyKit.xcframework */; };
 		D6A1CB362F1F4ACB004FDABD /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D6A1CB342F1F4AC2004FDABD /* Carbon.framework */; };
 		D6A1CB3A2F1F4B00004FDABD /* ghostty in Resources */ = {isa = PBXBuildFile; fileRef = D6A1CB392F1F4B00004FDABD /* ghostty */; };
+		AEE61A2DBA2E9742DF6B3D02 /* terminfo in Resources */ = {isa = PBXBuildFile; fileRef = 70404CB5891FB7CD90AD9424 /* terminfo */; };
 		D6F820F52F1FC962004B4174 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = D6F820F42F1FC962004B4174 /* Kingfisher */; };
 		DFE570C142184CC387C1BC78 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = B5698573F7354B14B940EA60 /* Sparkle */; };
 /* End PBXBuildFile section */
@@ -32,6 +33,7 @@
 		D6A1CB2F2F1F4A48004FDABD /* GhosttyKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = GhosttyKit.xcframework; sourceTree = "<group>"; };
 		D6A1CB342F1F4AC2004FDABD /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
 		D6A1CB392F1F4B00004FDABD /* ghostty */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ghostty; path = supacode/Resources/ghostty; sourceTree = "<group>"; };
+		70404CB5891FB7CD90AD9424 /* terminfo */ = {isa = PBXFileReference; lastKnownFileType = folder; name = terminfo; path = Resources/terminfo; sourceTree = "<group>"; };
 		D6F821012F1FCBC1004B4174 /* supacodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = supacodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -89,6 +91,7 @@
 			children = (
 				D642F6012F20AEBA00FFF851 /* git-wt */,
 				D6A1CB392F1F4B00004FDABD /* ghostty */,
+				70404CB5891FB7CD90AD9424 /* terminfo */,
 				D69CE04C2F1F378200584C57 /* supacode */,
 				D6F821022F1FCBC1004B4174 /* supacodeTests */,
 				D69CE04B2F1F378200584C57 /* Products */,
@@ -216,6 +219,7 @@
 			files = (
 				D642F6022F20AEBA00FFF851 /* git-wt in Resources */,
 				D6A1CB3A2F1F4B00004FDABD /* ghostty in Resources */,
+				AEE61A2DBA2E9742DF6B3D02 /* terminfo in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

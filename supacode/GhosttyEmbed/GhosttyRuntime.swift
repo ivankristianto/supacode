@@ -243,6 +243,18 @@ final class GhosttyRuntime {
     return Self.keyboardShortcut(for: trigger)
   }
 
+  func shouldShowScrollbar() -> Bool {
+    guard let config else { return true }
+    var valuePtr: UnsafePointer<CChar>?
+    let key = "scrollbar"
+    if ghostty_config_get(config, &valuePtr, key, UInt(key.lengthOfBytes(using: .utf8))),
+      let ptr = valuePtr
+    {
+      return String(cString: ptr) != "never"
+    }
+    return true
+  }
+
   private static func keyboardShortcut(for trigger: ghostty_input_trigger_s) -> KeyboardShortcut? {
     let key: KeyEquivalent
     switch trigger.tag {

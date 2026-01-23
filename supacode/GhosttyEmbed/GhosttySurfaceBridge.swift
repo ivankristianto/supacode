@@ -240,9 +240,11 @@ final class GhosttySurfaceBridge {
     switch action.tag {
     case GHOSTTY_ACTION_SCROLLBAR:
       let scroll = action.action.scrollbar
-      state.scrollbarTotal = scroll.total
-      state.scrollbarOffset = scroll.offset
-      state.scrollbarLength = scroll.len
+      surfaceView?.updateScrollbar(
+        total: scroll.total,
+        offset: scroll.offset,
+        length: scroll.len
+      )
       return true
 
     case GHOSTTY_ACTION_START_SEARCH:
@@ -284,8 +286,7 @@ final class GhosttySurfaceBridge {
 
     case GHOSTTY_ACTION_CELL_SIZE:
       let cell = action.action.cell_size
-      state.cellSizeWidth = cell.width
-      state.cellSizeHeight = cell.height
+      surfaceView?.updateCellSize(width: cell.width, height: cell.height)
       return true
 
     case GHOSTTY_ACTION_RESET_WINDOW_SIZE:

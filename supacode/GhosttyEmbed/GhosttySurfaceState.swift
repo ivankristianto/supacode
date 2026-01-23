@@ -24,9 +24,6 @@ final class GhosttySurfaceState {
   var colorChangeR: UInt8?
   var colorChangeG: UInt8?
   var colorChangeB: UInt8?
-  var scrollbarTotal: UInt64?
-  var scrollbarOffset: UInt64?
-  var scrollbarLength: UInt64?
   var searchNeedle: String?
   var searchTotal: Int?
   var searchSelected: Int?
@@ -36,8 +33,6 @@ final class GhosttySurfaceState {
   var sizeLimitMaxHeight: UInt32?
   var initialSizeWidth: UInt32?
   var initialSizeHeight: UInt32?
-  var cellSizeWidth: UInt32?
-  var cellSizeHeight: UInt32?
   var keySequenceActive: Bool?
   var keySequenceTrigger: ghostty_input_trigger_s?
   var keyTableTag: ghostty_action_key_table_tag_e?

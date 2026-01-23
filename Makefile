@@ -32,13 +32,22 @@ $(GHOSTTY_XCFRAMEWORK_PATH):
 sync-ghostty-resources: # Sync ghostty resources (themes, docs) over to the main repo
 	@src="$(CURRENT_MAKEFILE_DIR)/ThirdParty/ghostty/zig-out/share/ghostty"; \
 	dst="$(CURRENT_MAKEFILE_DIR)/supacode/Resources/ghostty"; \
+	terminfo_src="$(CURRENT_MAKEFILE_DIR)/ThirdParty/ghostty/zig-out/share/terminfo"; \
+	terminfo_dst="$(CURRENT_MAKEFILE_DIR)/Resources/terminfo"; \
 	if [ ! -d "$$src" ]; then \
 		echo "ghostty resources not found: $$src"; \
 		echo "run: make build-ghostty-xcframework"; \
 		exit 1; \
 	fi; \
+	if [ ! -d "$$terminfo_src" ]; then \
+		echo "ghostty terminfo not found: $$terminfo_src"; \
+		echo "run: make build-ghostty-xcframework"; \
+		exit 1; \
+	fi; \
 	mkdir -p "$$dst"; \
-	rsync -a --delete "$$src/" "$$dst/"
+	rsync -a --delete "$$src/" "$$dst/"; \
+	mkdir -p "$$terminfo_dst"; \
+	rsync -a --delete "$$terminfo_src/" "$$terminfo_dst/"
 
 build-app: build-ghostty-xcframework # Build the macOS app (Debug)
 	bash -o pipefail -c 'xcodebuild -project supacode.xcodeproj -scheme supacode -configuration Debug build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" 2>&1 | mise exec -- xcsift -qw'

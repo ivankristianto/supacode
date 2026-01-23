@@ -3,11 +3,11 @@ import SwiftUI
 struct GhosttyTerminalView: NSViewRepresentable {
   let surfaceView: GhosttySurfaceView
 
-  func makeNSView(context: Context) -> GhosttySurfaceView {
-    surfaceView
+  func makeNSView(context: Context) -> GhosttySurfaceScrollView {
+    GhosttySurfaceScrollView(surfaceView: surfaceView)
   }
 
-  func updateNSView(_ view: GhosttySurfaceView, context: Context) {
+  func updateNSView(_ view: GhosttySurfaceScrollView, context: Context) {
     view.updateSurfaceSize()
   }
 }
