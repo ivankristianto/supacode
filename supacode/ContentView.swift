@@ -506,13 +506,11 @@ private struct WorktreeRowsView: View {
 
   @ViewBuilder
   private func rowView(_ row: WorktreeRowModel, isRepositoryRemoving: Bool) -> some View {
-    let displayDetail = row.isDeleting ? "Removing..." : row.detail
     if row.isRemovable, let worktree = repositoryStore.worktree(for: row.id),
       !isRepositoryRemoving
     {
       WorktreeRow(
         name: row.name,
-        detail: displayDetail,
         isPinned: row.isPinned,
         isLoading: row.isPending || row.isDeleting
       )
@@ -537,7 +535,6 @@ private struct WorktreeRowsView: View {
     } else {
       WorktreeRow(
         name: row.name,
-        detail: displayDetail,
         isPinned: row.isPinned,
         isLoading: row.isPending || row.isDeleting
       )
@@ -616,7 +613,6 @@ private struct RepoHeaderRow: View {
 
 private struct WorktreeRow: View {
   let name: String
-  let detail: String
   let isPinned: Bool
   let isLoading: Bool
 
@@ -633,13 +629,7 @@ private struct WorktreeRow: View {
             .controlSize(.small)
         }
       }
-      VStack(alignment: .leading, spacing: 2) {
-        Text(name)
-        Text(detail.isEmpty ? " " : detail)
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .opacity(detail.isEmpty ? 0 : 1)
-      }
+      Text(name)
       Spacer(minLength: 8)
       if isPinned {
         Image(systemName: "pin.fill")

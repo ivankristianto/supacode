@@ -20,6 +20,8 @@ final class RepositoryStore {
   var removingRepositoryIDs: Set<Repository.ID> = []
   private(set) var pinnedWorktreeIDs: [Worktree.ID] = []
   private var reloadToken = 0
+  private var repositoryWatchers: [Repository.ID: RepositoryChangeWatcher] = [:]
+  private var reloadDebounceTask: Task<Void, Never>?
 
   var canCreateWorktree: Bool {
     if repositories.isEmpty {
@@ -541,6 +543,7 @@ final class RepositoryStore {
     } else {
       repositories = loaded
     }
+    refreshRepositoryWatchers(using: loaded)
     prunePinnedWorktreeIDs(using: loaded)
     let repositoryIDs = Set(loaded.map(\.id))
     pendingWorktrees = pendingWorktrees.filter { repositoryIDs.contains($0.repositoryID) }
@@ -559,6 +562,31 @@ final class RepositoryStore {
     if pruned != pinnedWorktreeIDs {
       pinnedWorktreeIDs = pruned
       persistPinnedWorktreeIDs()
+    }
+  }
+
+  private func refreshRepositoryWatchers(using repositories: [Repository]) {
+    let repositoryIDs = Set(repositories.map(\.id))
+    for (id, watcher) in repositoryWatchers where !repositoryIDs.contains(id) {
+      watcher.stop()
+      repositoryWatchers.removeValue(forKey: id)
+    }
+    for repository in repositories where repositoryWatchers[repository.id] == nil {
+      repositoryWatchers[repository.id] = RepositoryChangeWatcher(rootURL: repository.rootURL) {
+        [weak self] in
+        self?.scheduleReload(animated: true)
+      }
+    }
+  }
+
+  private func scheduleReload(animated: Bool) {
+    reloadDebounceTask?.cancel()
+    reloadDebounceTask = Task {
+      try? await Task.sleep(for: .milliseconds(350))
+      guard !Task.isCancelled else { return }
+      let roots = repositories.map(\.rootURL)
+      guard !roots.isEmpty else { return }
+      _ = await reloadRepositories(for: roots, animated: animated)
     }
   }
 
