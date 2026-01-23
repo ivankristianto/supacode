@@ -188,11 +188,10 @@ struct GitClient {
   }
 
   nonisolated private func wtScriptURL() throws -> URL {
-    if let url = Bundle.main.url(forResource: "wt", withExtension: nil, subdirectory: "git-wt") {
-      return url
+    guard let url = Bundle.main.url(forResource: "wt", withExtension: nil, subdirectory: "git-wt") else {
+        fatalError("Bundled wt script not found")
     }
-    throw GitClientError.commandFailed(
-      command: "wt ls --json", message: "Bundled wt script not found")
+      return url
   }
 
   nonisolated private func originRemoteURL(for repoRoot: URL) async -> String? {
