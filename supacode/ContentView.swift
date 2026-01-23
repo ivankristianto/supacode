@@ -125,6 +125,12 @@ private struct WorktreeDetailView: View {
   private let settingsStore = RepositorySettingsStore()
 
   var body: some View {
+    let isOpenDisabled = selectedWorktree == nil || loadingInfo != nil
+    let openActionHelpText =
+      "\(openActionSelection.title) (\(AppShortcuts.openFinder.display))"
+    let openSelectedWorktreeAction: (() -> Void)? = isOpenDisabled
+      ? nil
+      : { performOpenAction(openActionSelection) }
     Group {
       if let loadingInfo {
         WorktreeLoadingView(info: loadingInfo)
@@ -138,9 +144,6 @@ private struct WorktreeDetailView: View {
     }
     .navigationTitle(selectedWorktree?.name ?? loadingInfo?.name ?? "Supacode")
     .toolbar {
-      let isOpenDisabled = selectedWorktree == nil || loadingInfo != nil
-      let openActionHelpText =
-        "\(openActionSelection.title) (\(AppShortcuts.openFinder.display))"
       if !isOpenDisabled {
         ToolbarItemGroup(placement: .primaryAction) {
           Menu {
@@ -161,11 +164,6 @@ private struct WorktreeDetailView: View {
                   Label(action.title, systemImage: "app")
                 }
               }
-              .modifier(
-                OpenActionShortcutModifier(
-                  shortcut: isDefault ? AppShortcuts.openFinder : nil
-                )
-              )
               .help(
                 isDefault
                   ? "\(action.title) (\(AppShortcuts.openFinder.display))"
@@ -227,6 +225,7 @@ private struct WorktreeDetailView: View {
         terminalStore.closeFocusedSurface(in: selectedWorktree)
       }
     )
+    .focusedSceneValue(\.openSelectedWorktreeAction, openSelectedWorktreeAction)
   }
 
   private func performOpenAction(_ action: OpenWorktreeAction) {
@@ -722,17 +721,5 @@ private struct EmptyStateView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(nsColor: .windowBackgroundColor))
     .multilineTextAlignment(.center)
-  }
-}
-
-private struct OpenActionShortcutModifier: ViewModifier {
-  let shortcut: AppShortcut?
-
-  func body(content: Content) -> some View {
-    if let shortcut {
-      content.keyboardShortcut(shortcut.keyEquivalent, modifiers: shortcut.modifiers)
-    } else {
-      content
-    }
   }
 }

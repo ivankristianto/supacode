@@ -3,6 +3,7 @@ import SwiftUI
 
 struct WorktreeCommands: Commands {
   let repositoryStore: RepositoryStore
+  @FocusedValue(\.openSelectedWorktreeAction) private var openSelectedWorktreeAction
   @FocusedValue(\.removeWorktreeAction) private var removeWorktreeAction
 
   var body: some Commands {
@@ -16,6 +17,15 @@ struct WorktreeCommands: Commands {
         modifiers: AppShortcuts.openRepository.modifiers
       )
       .help("Open Repository (\(AppShortcuts.openRepository.display))")
+      Button("Open Worktree") {
+        openSelectedWorktreeAction?()
+      }
+      .keyboardShortcut(
+        AppShortcuts.openFinder.keyEquivalent,
+        modifiers: AppShortcuts.openFinder.modifiers
+      )
+      .help("Open Worktree (\(AppShortcuts.openFinder.display))")
+      .disabled(openSelectedWorktreeAction == nil)
       Button("New Worktree", systemImage: "plus") {
         Task {
           await repositoryStore.createRandomWorktree()
@@ -50,7 +60,16 @@ private struct RemoveWorktreeActionKey: FocusedValueKey {
   typealias Value = () -> Void
 }
 
+private struct OpenSelectedWorktreeActionKey: FocusedValueKey {
+  typealias Value = () -> Void
+}
+
 extension FocusedValues {
+  var openSelectedWorktreeAction: (() -> Void)? {
+    get { self[OpenSelectedWorktreeActionKey.self] }
+    set { self[OpenSelectedWorktreeActionKey.self] = newValue }
+  }
+
   var removeWorktreeAction: (() -> Void)? {
     get { self[RemoveWorktreeActionKey.self] }
     set { self[RemoveWorktreeActionKey.self] = newValue }
