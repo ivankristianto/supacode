@@ -669,6 +669,7 @@ extension RepositoriesFeature.State {
         name: pending.name,
         detail: pending.detail,
         isPinned: false,
+        isMainWorktree: false,
         isPending: true,
         isDeleting: isDeleting,
         isRemovable: false
@@ -685,6 +686,7 @@ extension RepositoriesFeature.State {
           name: worktree.name,
           detail: worktree.detail,
           isPinned: pinnedWorktreeIDs.contains(worktree.id),
+          isMainWorktree: isMainWorktree(worktree),
           isPending: false,
           isDeleting: isDeleting,
           isRemovable: !isDeleting
@@ -698,15 +700,20 @@ extension RepositoriesFeature.State {
     repositories.first(where: { $0.id == id })?.name
   }
 
+  func isMainWorktree(_ worktree: Worktree) -> Bool {
+    worktree.workingDirectory.standardizedFileURL == worktree.repositoryRootURL.standardizedFileURL
+  }
+
   func orderedWorktrees(in repository: Repository) -> [Worktree] {
-    if pinnedWorktreeIDs.isEmpty {
-      return repository.worktrees
-    }
     let worktreeByID = Dictionary(uniqueKeysWithValues: repository.worktrees.map { ($0.id, $0) })
     var ordered: [Worktree] = []
     var seen: Set<Worktree.ID> = []
+    if let mainWorktree = repository.worktrees.first(where: { isMainWorktree($0) }) {
+      ordered.append(mainWorktree)
+      seen.insert(mainWorktree.id)
+    }
     for id in pinnedWorktreeIDs {
-      if let worktree = worktreeByID[id] {
+      if let worktree = worktreeByID[id], !seen.contains(id) {
         ordered.append(worktree)
         seen.insert(id)
       }
@@ -729,11 +736,32 @@ extension RepositoriesFeature.State {
     let ordered = orderedWorktrees(in: repository)
     let pinnedIDs = Set(pinnedWorktreeIDs)
     let isRemovingRepository = removingRepositoryIDs.contains(repository.id)
+    let mainWorktreeID = repository.worktrees.first(where: { isMainWorktree($0) })?.id
+    let mainWorktree = mainWorktreeID.flatMap { id in ordered.first(where: { $0.id == id }) }
     let pinnedWorktrees = ordered.filter { pinnedIDs.contains($0.id) }
     let unpinnedWorktrees = ordered.filter { !pinnedIDs.contains($0.id) }
     let pendingEntries = pendingWorktrees.filter { $0.repositoryID == repository.id }
     var rows: [WorktreeRowModel] = []
+    if let mainWorktree {
+      let isDeleting = isRemovingRepository || deletingWorktreeIDs.contains(mainWorktree.id)
+      rows.append(
+        WorktreeRowModel(
+          id: mainWorktree.id,
+          repositoryID: repository.id,
+          name: mainWorktree.name,
+          detail: mainWorktree.detail,
+          isPinned: pinnedIDs.contains(mainWorktree.id),
+          isMainWorktree: true,
+          isPending: false,
+          isDeleting: isDeleting,
+          isRemovable: !isDeleting
+        )
+      )
+    }
     for worktree in pinnedWorktrees {
+      if worktree.id == mainWorktreeID {
+        continue
+      }
       let isDeleting = isRemovingRepository || deletingWorktreeIDs.contains(worktree.id)
       rows.append(
         WorktreeRowModel(
@@ -742,6 +770,7 @@ extension RepositoriesFeature.State {
           name: worktree.name,
           detail: worktree.detail,
           isPinned: true,
+          isMainWorktree: false,
           isPending: false,
           isDeleting: isDeleting,
           isRemovable: !isDeleting
@@ -756,6 +785,7 @@ extension RepositoriesFeature.State {
           name: pending.name,
           detail: pending.detail,
           isPinned: false,
+          isMainWorktree: false,
           isPending: true,
           isDeleting: isRemovingRepository,
           isRemovable: false
@@ -763,6 +793,9 @@ extension RepositoriesFeature.State {
       )
     }
     for worktree in unpinnedWorktrees {
+      if worktree.id == mainWorktreeID {
+        continue
+      }
       let isDeleting = isRemovingRepository || deletingWorktreeIDs.contains(worktree.id)
       rows.append(
         WorktreeRowModel(
@@ -771,6 +804,7 @@ extension RepositoriesFeature.State {
           name: worktree.name,
           detail: worktree.detail,
           isPinned: false,
+          isMainWorktree: false,
           isPending: false,
           isDeleting: isDeleting,
           isRemovable: !isDeleting

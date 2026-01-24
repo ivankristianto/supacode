@@ -3,6 +3,7 @@ import SwiftUI
 struct WorktreeRow: View {
   let name: String
   let isPinned: Bool
+  let isMainWorktree: Bool
   let isLoading: Bool
 
   var body: some View {
@@ -20,6 +21,12 @@ struct WorktreeRow: View {
       }
       Text(name)
       Spacer(minLength: 8)
+      if isMainWorktree {
+        Image(systemName: "star.fill")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .accessibilityHidden(true)
+      }
       if isPinned {
         Image(systemName: "pin.fill")
           .font(.caption)

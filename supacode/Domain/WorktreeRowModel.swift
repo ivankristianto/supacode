@@ -6,6 +6,7 @@ struct WorktreeRowModel: Identifiable, Hashable {
   let name: String
   let detail: String
   let isPinned: Bool
+  let isMainWorktree: Bool
   let isPending: Bool
   let isDeleting: Bool
   let isRemovable: Bool

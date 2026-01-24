@@ -98,9 +98,10 @@ struct GitClient {
   nonisolated func createWorktree(named name: String, in repoRoot: URL) async throws -> Worktree {
     let repositoryRootURL = repoRoot.standardizedFileURL
     let wtURL = try wtScriptURL()
+    let baseDir = SupacodePaths.repositoryDirectory(for: repositoryRootURL)
     let output = try await runLoginShellProcess(
       executableURL: wtURL,
-      arguments: ["sw", name],
+      arguments: ["--base-dir", baseDir.path(percentEncoded: false), "sw", name],
       currentDirectoryURL: repoRoot
     )
     let pathLine = output.split(whereSeparator: \.isNewline).last.map(String.init) ?? ""

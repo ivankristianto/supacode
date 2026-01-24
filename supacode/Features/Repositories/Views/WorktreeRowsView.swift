@@ -23,6 +23,7 @@ struct WorktreeRowsView: View {
       WorktreeRow(
         name: row.name,
         isPinned: row.isPinned,
+        isMainWorktree: row.isMainWorktree,
         isLoading: row.isPending || row.isDeleting
       )
       .tag(row.id)
@@ -47,6 +48,7 @@ struct WorktreeRowsView: View {
       WorktreeRow(
         name: row.name,
         isPinned: row.isPinned,
+        isMainWorktree: row.isMainWorktree,
         isLoading: row.isPending || row.isDeleting
       )
       .tag(row.id)
