@@ -9,9 +9,15 @@ final class RepositoryStore {
   private let gitClient: GitClient = .init()
   private let rootsKey = "repositories.roots"
   private let pinnedWorktreesKey = "repositories.worktrees.pinned"
+  private let lastSelectedWorktreeKey = "repositories.worktrees.lastSelected"
 
   var repositories: [Repository] = []
-  var selectedWorktreeID: String?
+  var selectedWorktreeID: String? {
+    didSet {
+      guard oldValue != selectedWorktreeID else { return }
+      persistLastSelectedWorktreeID(from: selectedWorktreeID)
+    }
+  }
   var isOpenPanelPresented = false
   var alert: AppAlert?
   var pendingWorktrees: [PendingWorktree] = []
@@ -34,6 +40,7 @@ final class RepositoryStore {
   }
 
   fileprivate func start() async {
+    selectedWorktreeID = loadLastSelectedWorktreeID()
     pinnedWorktreeIDs = loadPinnedWorktreeIDs()
     print("[RepositoryStore] pinnedWorktreeIDs: \(pinnedWorktreeIDs)")
     await loadPersistedRepositories()
@@ -520,6 +527,30 @@ final class RepositoryStore {
     userDefaults.set(data, forKey: pinnedWorktreesKey)
   }
 
+  private func loadLastSelectedWorktreeID() -> Worktree.ID? {
+    guard let id = userDefaults.string(forKey: lastSelectedWorktreeKey),
+      !id.isEmpty
+    else { return nil }
+    return id
+  }
+
+  private func persistLastSelectedWorktreeID(from id: Worktree.ID?) {
+    guard let id else {
+      persistLastSelectedWorktreeID(nil)
+      return
+    }
+    guard worktree(for: id) != nil else { return }
+    persistLastSelectedWorktreeID(id)
+  }
+
+  private func persistLastSelectedWorktreeID(_ id: Worktree.ID?) {
+    if let id {
+      userDefaults.set(id, forKey: lastSelectedWorktreeKey)
+    } else {
+      userDefaults.removeObject(forKey: lastSelectedWorktreeKey)
+    }
+  }
+
   @discardableResult
   private func reloadRepositories(for roots: [URL], animated: Bool = false) async -> [Repository]? {
     reloadToken += 1
@@ -547,11 +578,18 @@ final class RepositoryStore {
     prunePinnedWorktreeIDs(using: loaded)
     let repositoryIDs = Set(loaded.map(\.id))
     pendingWorktrees = pendingWorktrees.filter { repositoryIDs.contains($0.repositoryID) }
+    let persistedSelection = loadLastSelectedWorktreeID()
     if !isSelectionValid(selectedWorktreeID) {
       print(
         "[RepositoryStore] selectedWorktreeID \(String(describing: selectedWorktreeID)) is invalid, clearing"
       )
-      selectedWorktreeID = nil
+      if let persistedSelection, isSelectionValid(persistedSelection) {
+        selectedWorktreeID = persistedSelection
+      } else if persistedSelection != nil {
+        selectedWorktreeID = firstAvailableWorktreeID(from: repositories)
+      } else {
+        selectedWorktreeID = nil
+      }
     }
     print("[RepositoryStore] applyRepositories done, repositories.count = \(repositories.count)")
   }
