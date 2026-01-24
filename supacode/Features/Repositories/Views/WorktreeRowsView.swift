@@ -26,7 +26,7 @@ struct WorktreeRowsView: View {
         isMainWorktree: row.isMainWorktree,
         isLoading: row.isPending || row.isDeleting
       )
-      .tag(row.id)
+      .tag(SidebarSelection.worktree(row.id))
       .contextMenu {
         if row.isPinned {
           Button("Unpin") {
@@ -52,7 +52,7 @@ struct WorktreeRowsView: View {
         isMainWorktree: row.isMainWorktree,
         isLoading: row.isPending || row.isDeleting
       )
-      .tag(row.id)
+      .tag(SidebarSelection.worktree(row.id))
       .disabled(isRepositoryRemoving)
     }
   }

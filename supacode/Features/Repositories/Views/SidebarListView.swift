@@ -6,9 +6,9 @@ struct SidebarListView: View {
   @Binding var expandedRepoIDs: Set<Repository.ID>
 
   var body: some View {
-    let selection = Binding<Worktree.ID?>(
-      get: { store.selectedWorktreeID },
-      set: { store.send(.selectWorktree($0)) }
+    let selection = Binding<SidebarSelection?>(
+      get: { store.selectedWorktreeID.map(SidebarSelection.worktree) },
+      set: { store.send(.selectWorktree($0?.worktreeID)) }
     )
     List(selection: selection) {
       ForEach(store.repositories) { repository in
