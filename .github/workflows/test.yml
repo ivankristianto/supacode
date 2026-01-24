@@ -21,7 +21,8 @@ jobs:
           submodules: recursive
       - run: brew install mise 2>/dev/null
       - run: mise install
-      - run: |
+      - name: Build ghostty
+        run: |
           GHOSTTY_SHA=$(git -C ThirdParty/ghostty rev-parse HEAD)
           CACHE_BASE="/Volumes/My Shared Files/gha-cache"
           if [ -d "$CACHE_BASE" ]; then
