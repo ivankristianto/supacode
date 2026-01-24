@@ -17,7 +17,7 @@ VERSION ?=
 BUILD ?=
 
 .DEFAULT_GOAL := help
-.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources lint test update-wt bump-version
+.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources lint test update-wt bump-version bump-and-release
 
 help:  # Display this help.
 	@-+echo "Run make with one of the following targets:"
@@ -119,3 +119,6 @@ bump-version: # Bump app version (usage: make bump-version [VERSION=x.x.x] [BUIL
 	git commit -m "bump v$$version"; \
 	git tag "v$$version"; \
 	echo "version bumped to $$version (build $$build), tagged v$$version"
+
+bump-and-release: bump-version # Bump version and push tags to trigger release
+	git push && git push --tags
