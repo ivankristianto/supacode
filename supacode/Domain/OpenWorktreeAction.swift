@@ -3,8 +3,11 @@ import AppKit
 enum OpenWorktreeAction: CaseIterable, Identifiable {
   case finder
   case cursor
-  case zed
   case ghostty
+  case terminal
+  case wezterm
+  case xcode
+  case zed
 
   var id: String { title }
 
@@ -12,15 +15,18 @@ enum OpenWorktreeAction: CaseIterable, Identifiable {
     switch self {
     case .finder: "Open Finder"
     case .cursor: "Cursor"
-    case .zed: "Zed"
     case .ghostty: "Ghostty"
+    case .terminal: "Terminal"
+    case .wezterm: "WezTerm"
+    case .xcode: "Xcode"
+    case .zed: "Zed"
     }
   }
 
   var labelTitle: String {
     switch self {
     case .finder: "Finder"
-    case .cursor, .zed, .ghostty: title
+    case .cursor, .ghostty, .terminal, .wezterm, .xcode, .zed: title
     }
   }
 
@@ -34,8 +40,11 @@ enum OpenWorktreeAction: CaseIterable, Identifiable {
     switch self {
     case .finder: "finder"
     case .cursor: "cursor"
-    case .zed: "zed"
     case .ghostty: "ghostty"
+    case .terminal: "terminal"
+    case .wezterm: "wezterm"
+    case .xcode: "xcode"
+    case .zed: "zed"
     }
   }
 
@@ -43,8 +52,11 @@ enum OpenWorktreeAction: CaseIterable, Identifiable {
     switch self {
     case .finder: "com.apple.finder"
     case .cursor: "com.todesktop.230313mzl4w4u92"
-    case .zed: "dev.zed.Zed"
     case .ghostty: "com.mitchellh.ghostty"
+    case .terminal: "com.apple.Terminal"
+    case .wezterm: "com.github.wez.wezterm"
+    case .xcode: "com.apple.dt.Xcode"
+    case .zed: "dev.zed.Zed"
     }
   }
 
@@ -52,8 +64,11 @@ enum OpenWorktreeAction: CaseIterable, Identifiable {
     switch settingsID {
     case OpenWorktreeAction.finder.settingsID: .finder
     case OpenWorktreeAction.cursor.settingsID: .cursor
-    case OpenWorktreeAction.zed.settingsID: .zed
     case OpenWorktreeAction.ghostty.settingsID: .ghostty
+    case OpenWorktreeAction.terminal.settingsID: .terminal
+    case OpenWorktreeAction.wezterm.settingsID: .wezterm
+    case OpenWorktreeAction.xcode.settingsID: .xcode
+    case OpenWorktreeAction.zed.settingsID: .zed
     default: .finder
     }
   }
@@ -62,7 +77,7 @@ enum OpenWorktreeAction: CaseIterable, Identifiable {
     switch self {
     case .finder:
       NSWorkspace.shared.activateFileViewerSelecting([worktree.workingDirectory])
-    case .cursor, .zed, .ghostty:
+    case .cursor, .ghostty, .terminal, .wezterm, .xcode, .zed:
       guard
         let appURL = NSWorkspace.shared.urlForApplication(
           withBundleIdentifier: bundleIdentifier
