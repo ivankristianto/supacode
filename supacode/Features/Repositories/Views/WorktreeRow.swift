@@ -9,7 +9,7 @@ struct WorktreeRow: View {
 
   var body: some View {
     let showsSpinner = isLoading || taskStatus == .running
-    HStack(alignment: .firstTextBaseline) {
+    HStack(alignment: .center) {
       ZStack {
         Image(systemName: "arrow.triangle.branch")
           .font(.caption)
