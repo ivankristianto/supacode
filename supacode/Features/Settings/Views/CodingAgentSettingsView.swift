@@ -8,9 +8,9 @@ struct CodingAgentSettingsView: View {
           Text("No settings yet.")
             .foregroundStyle(.secondary)
         }
+      }
+      .formStyle(.grouped)
     }
-    .formStyle(.grouped)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
-  .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-}
 }
