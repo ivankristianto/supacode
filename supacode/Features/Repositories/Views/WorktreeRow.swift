@@ -26,18 +26,19 @@ struct WorktreeRow: View {
       Spacer(minLength: 8)
       if let shortcutHint {
         ShortcutHintView(text: shortcutHint, color: .secondary)
-      }
-      if isMainWorktree {
-        Image(systemName: "star.fill")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .accessibilityHidden(true)
-      }
-      if isPinned {
-        Image(systemName: "pin.fill")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .accessibilityHidden(true)
+      } else {
+        if isMainWorktree {
+          Image(systemName: "star.fill")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityHidden(true)
+        }
+        if isPinned {
+          Image(systemName: "pin.fill")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityHidden(true)
+        }
       }
     }
   }

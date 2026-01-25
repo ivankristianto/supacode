@@ -24,25 +24,26 @@ struct TerminalTabLabelView: View {
         .lineLimit(1)
         .foregroundStyle(isActive ? TerminalTabBarColors.activeText : TerminalTabBarColors.inactiveText)
       Spacer(minLength: TerminalTabBarMetrics.contentTrailingSpacing)
-      if commandKeyObserver.isPressed, let shortcutHint {
-        ShortcutHintView(text: shortcutHint, color: TerminalTabBarColors.inactiveText)
-      }
       ZStack {
-        if tab.isDirty && !isHoveringTab && !isHoveringClose {
-          Circle()
-            .fill(TerminalTabBarColors.dirtyIndicator)
-            .frame(
-              width: TerminalTabBarMetrics.dirtyIndicatorSize,
-              height: TerminalTabBarMetrics.dirtyIndicatorSize
-            )
+        if commandKeyObserver.isPressed, let shortcutHint {
+          ShortcutHintView(text: shortcutHint, color: TerminalTabBarColors.inactiveText)
+        } else {
+          if tab.isDirty && !isHoveringTab && !isHoveringClose {
+            Circle()
+              .fill(TerminalTabBarColors.dirtyIndicator)
+              .frame(
+                width: TerminalTabBarMetrics.dirtyIndicatorSize,
+                height: TerminalTabBarMetrics.dirtyIndicatorSize
+              )
+          }
+          TerminalTabCloseButton(
+            isHoveringTab: isHoveringTab,
+            isDragging: isDragging,
+            closeAction: closeAction,
+            closeButtonGestureActive: $closeButtonGestureActive,
+            isHoveringClose: $isHoveringClose
+          )
         }
-        TerminalTabCloseButton(
-          isHoveringTab: isHoveringTab,
-          isDragging: isDragging,
-          closeAction: closeAction,
-          closeButtonGestureActive: $closeButtonGestureActive,
-          isHoveringClose: $isHoveringClose
-        )
       }
     }
     .frame(maxHeight: .infinity)
