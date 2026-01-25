@@ -13,11 +13,10 @@ struct WorktreeCommands: Commands {
   }
 
   var body: some Commands {
-    let selectedRepositoryID = viewStore.state.repositoryID(for: viewStore.state.selectedWorktreeID)
-    let orderedIDs = viewStore.state.orderedWorktreeIDs(in: selectedRepositoryID)
+    let orderedRows = viewStore.state.orderedWorktreeRows()
     CommandMenu("Worktrees") {
       ForEach(worktreeShortcuts.enumerated(), id: \.offset) { index, shortcut in
-        worktreeShortcutButton(index: index, shortcut: shortcut, orderedIDs: orderedIDs)
+        worktreeShortcutButton(index: index, shortcut: shortcut, orderedRows: orderedRows)
       }
     }
     CommandGroup(replacing: .newItem) {
@@ -70,17 +69,23 @@ struct WorktreeCommands: Commands {
   private func worktreeShortcutButton(
     index: Int,
     shortcut: AppShortcut,
-    orderedIDs: [Worktree.ID]
+    orderedRows: [WorktreeRowModel]
   ) -> some View {
-    let worktreeNumber = index + 1
-    let title = "Worktree \(worktreeNumber)"
+    let row = orderedRows.indices.contains(index) ? orderedRows[index] : nil
+    let title = worktreeShortcutTitle(index: index, row: row)
     return Button(title) {
-      guard orderedIDs.indices.contains(index) else { return }
-      store.send(.selectWorktree(orderedIDs[index]))
+      guard let row else { return }
+      store.send(.selectWorktree(row.id))
     }
     .keyboardShortcut(shortcut.keyEquivalent, modifiers: shortcut.modifiers)
     .help("Switch to \(title) (\(shortcut.display))")
-    .disabled(!orderedIDs.indices.contains(index))
+    .disabled(row == nil)
+  }
+
+  private func worktreeShortcutTitle(index: Int, row: WorktreeRowModel?) -> String {
+    guard let row else { return "Worktree \(index + 1)" }
+    let repositoryName = viewStore.state.repositoryName(for: row.repositoryID) ?? "Repository"
+    return "\(repositoryName) — \(row.name)"
   }
 }
 

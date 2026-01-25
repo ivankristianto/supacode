@@ -67,13 +67,38 @@ struct RepositoriesFeatureTests {
     }
   }
 
-  private func makeWorktree(id: String, name: String) -> Worktree {
+  @Test func orderedWorktreeRowsAreGlobal() {
+    let repoA = makeRepository(
+      id: "/tmp/repo-a",
+      worktrees: [
+        makeWorktree(id: "/tmp/repo-a/wt1", name: "wt1", repoRoot: "/tmp/repo-a"),
+        makeWorktree(id: "/tmp/repo-a/wt2", name: "wt2", repoRoot: "/tmp/repo-a"),
+      ]
+    )
+    let repoB = makeRepository(
+      id: "/tmp/repo-b",
+      worktrees: [
+        makeWorktree(id: "/tmp/repo-b/wt3", name: "wt3", repoRoot: "/tmp/repo-b")
+      ]
+    )
+    let state = RepositoriesFeature.State(repositories: [repoA, repoB])
+
+    #expect(
+      state.orderedWorktreeRows().map(\.id) == [
+        "/tmp/repo-a/wt1",
+        "/tmp/repo-a/wt2",
+        "/tmp/repo-b/wt3",
+      ]
+    )
+  }
+
+  private func makeWorktree(id: String, name: String, repoRoot: String = "/tmp/repo") -> Worktree {
     Worktree(
       id: id,
       name: name,
       detail: "detail",
       workingDirectory: URL(fileURLWithPath: id),
-      repositoryRootURL: URL(fileURLWithPath: "/tmp/repo")
+      repositoryRootURL: URL(fileURLWithPath: repoRoot)
     )
   }
 

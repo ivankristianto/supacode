@@ -13,10 +13,14 @@ struct WorktreeRowsView: View {
       let state = store.state
       let rows = state.worktreeRows(in: repository)
       let isRepositoryRemoving = state.isRemovingRepository(repository)
-      let selectedRepositoryID = state.repositoryID(for: state.selectedWorktreeID)
-      let showShortcutHints = commandKeyObserver.isPressed && selectedRepositoryID == repository.id
-      ForEach(rows.enumerated(), id: \.element.id) { index, row in
-        let shortcutHint = showShortcutHints ? worktreeShortcutHint(for: index) : nil
+      let showShortcutHints = commandKeyObserver.isPressed
+      let allRows = showShortcutHints ? state.orderedWorktreeRows() : []
+      let shortcutIndexByID = Dictionary(
+        uniqueKeysWithValues: allRows.enumerated().map { ($0.element.id, $0.offset) }
+      )
+      ForEach(rows) { row in
+        let shortcutHint =
+          showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
         rowView(
           row,
           isRepositoryRemoving: isRepositoryRemoving,
@@ -75,8 +79,8 @@ struct WorktreeRowsView: View {
     }
   }
 
-  private func worktreeShortcutHint(for index: Int) -> String? {
-    guard AppShortcuts.worktreeSelection.indices.contains(index) else { return nil }
+  private func worktreeShortcutHint(for index: Int?) -> String? {
+    guard let index, AppShortcuts.worktreeSelection.indices.contains(index) else { return nil }
     return AppShortcuts.worktreeSelection[index].display
   }
 }

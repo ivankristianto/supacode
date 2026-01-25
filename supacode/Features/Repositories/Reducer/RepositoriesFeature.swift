@@ -833,11 +833,8 @@ extension RepositoriesFeature.State {
     return rows
   }
 
-  func orderedWorktreeIDs(in repositoryID: Repository.ID?) -> [Worktree.ID] {
-    guard let repositoryID,
-          let repository = repositories.first(where: { $0.id == repositoryID })
-    else { return [] }
-    return worktreeRows(in: repository).map(\.id)
+  func orderedWorktreeRows() -> [WorktreeRowModel] {
+    repositories.flatMap { worktreeRows(in: $0) }
   }
 }
 
