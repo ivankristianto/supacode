@@ -129,9 +129,7 @@ jobs:
           path: |
             ~/.local/share/mise
             ~/.cache/mise
-          key: ${{ runner.os }}-${{ runner.arch }}-mise-${{ hashFiles('mise.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-mise-
+          key: ${{ runner.os }}-${{ runner.arch }}-mise-v0-${{ hashFiles('**/mise.toml', '**/.mise.toml', '**/.tool-versions', '**/.config/mise.toml', '**/mise/config.toml', '**/mise.lock', '**/.mise.lock', '**/mise/config.lock', '**/.config/mise.lock', '**/mise.*.toml', '**/.mise.*.toml', '**/.config/mise.*.toml', '**/mise.*.lock', '**/.mise.*.lock', '**/.config/mise.*.lock') }}
       - run: brew install mise 2>/dev/null
       - run: mise install
       - name: Ghostty cache key
