@@ -299,7 +299,9 @@ jobs:
         with:
           name: release-notes
           path: build
-      - run: |
+      - name: Generate appcast with history
+        run: |
+          set -euo pipefail
           NOTES_FILE=build/release-notes.txt
           STAGING=$(mktemp -d)
           ARCHIVE=build/supacode.app.zip
@@ -307,7 +309,10 @@ jobs:
           ARCHIVE_BASE="${ARCHIVE_BASE%.zip}"
           cp "$ARCHIVE" "$STAGING/"
           cp "$NOTES_FILE" "$STAGING/$ARCHIVE_BASE.txt"
-          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://supacode.sh/download/$TAG/" --embed-release-notes --ed-key-file - "$STAGING"
+
+          curl -fsSL "https://supacode.sh/download/latest/appcast.xml" -o "$STAGING/appcast.xml" || true
+
+          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://supacode.sh/download/$TAG/" --embed-release-notes --maximum-versions 10 --ed-key-file - "$STAGING"
           cp "$STAGING/appcast.xml" build/appcast.xml
       - uses: actions/upload-artifact@v4
         with:
