@@ -1,3 +1,4 @@
+import AppKit
 import ComposableArchitecture
 import SwiftUI
 
@@ -64,6 +65,10 @@ struct WorktreeRowsView: View {
             }
             .help("Pin to top (no shortcut)")
           }
+        }
+        Button("Copy Path") {
+          NSPasteboard.general.clearContents()
+          NSPasteboard.general.setString(worktree.workingDirectory.path, forType: .string)
         }
         Button("Remove worktree (⌘⌫)") {
           store.send(.requestRemoveWorktree(worktree.id, repository.id))
