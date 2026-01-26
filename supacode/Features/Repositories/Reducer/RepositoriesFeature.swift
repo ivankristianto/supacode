@@ -569,6 +569,9 @@ struct RepositoriesFeature {
   }
 
   private func applyRepositories(_ repositories: [Repository], state: inout State, animated: Bool) {
+    let previousCounts = Dictionary(
+      uniqueKeysWithValues: state.repositories.map { ($0.id, $0.worktrees.count) }
+    )
     if animated {
       withAnimation {
         state.repositories = repositories
@@ -580,7 +583,23 @@ struct RepositoriesFeature {
       repositoryPersistence.savePinnedWorktreeIDs(state.pinnedWorktreeIDs)
     }
     let repositoryIDs = Set(repositories.map(\.id))
-    state.pendingWorktrees = state.pendingWorktrees.filter { repositoryIDs.contains($0.repositoryID) }
+    let newCounts = Dictionary(
+      uniqueKeysWithValues: repositories.map { ($0.id, $0.worktrees.count) }
+    )
+    var addedCounts: [Repository.ID: Int] = [:]
+    for (id, newCount) in newCounts {
+      let oldCount = previousCounts[id] ?? 0
+      let added = newCount - oldCount
+      if added > 0 {
+        addedCounts[id] = added
+      }
+    }
+    state.pendingWorktrees = state.pendingWorktrees.filter { pending in
+      guard repositoryIDs.contains(pending.repositoryID) else { return false }
+      guard let remaining = addedCounts[pending.repositoryID], remaining > 0 else { return true }
+      addedCounts[pending.repositoryID] = remaining - 1
+      return false
+    }
     let availableWorktreeIDs = Set(repositories.flatMap { $0.worktrees.map(\.id) })
     state.deletingWorktreeIDs = state.deletingWorktreeIDs.intersection(availableWorktreeIDs)
     state.pendingSetupScriptWorktreeIDs = state.pendingSetupScriptWorktreeIDs.filter {
