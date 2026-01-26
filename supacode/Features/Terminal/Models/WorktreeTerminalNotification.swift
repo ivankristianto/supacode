@@ -12,4 +12,8 @@ struct WorktreeTerminalNotification: Identifiable, Equatable, Sendable {
     self.title = title
     self.body = body
   }
+
+  var content: String {
+    [title, body].filter { !$0.isEmpty }.joined(separator: " - ")
+  }
 }
