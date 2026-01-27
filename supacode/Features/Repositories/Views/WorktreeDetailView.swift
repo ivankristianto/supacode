@@ -16,20 +16,20 @@ struct WorktreeDetailView: View {
     let selectedRow = repositories.selectedRow(for: repositories.selectedWorktreeID)
     let selectedWorktree = repositories.worktree(for: repositories.selectedWorktreeID)
     let loadingInfo = loadingInfo(for: selectedRow, repositories: repositories)
-    let isOpenDisabled = selectedWorktree == nil || loadingInfo != nil
+    let hasActiveWorktree = selectedWorktree != nil && loadingInfo == nil
     let openActionSelection = state.openActionSelection
-    let openSelectedWorktreeAction: (() -> Void)? = isOpenDisabled
-      ? nil
-      : { store.send(.openSelectedWorktree) }
-    let newTerminalAction: (() -> Void)? = isOpenDisabled
-      ? nil
-      : { store.send(.newTerminal) }
-    let closeTabAction: (() -> Void)? = isOpenDisabled
-      ? nil
-      : { store.send(.closeTab) }
-    let closeSurfaceAction: (() -> Void)? = isOpenDisabled
-      ? nil
-      : { store.send(.closeSurface) }
+    let openSelectedWorktreeAction: (() -> Void)? = hasActiveWorktree
+      ? { store.send(.openSelectedWorktree) }
+      : nil
+    let newTerminalAction: (() -> Void)? = hasActiveWorktree
+      ? { store.send(.newTerminal) }
+      : nil
+    let closeTabAction: (() -> Void)? = hasActiveWorktree
+      ? { store.send(.closeTab) }
+      : nil
+    let closeSurfaceAction: (() -> Void)? = hasActiveWorktree
+      ? { store.send(.closeSurface) }
+      : nil
     Group {
       if let loadingInfo {
         WorktreeLoadingView(info: loadingInfo)
@@ -59,11 +59,13 @@ struct WorktreeDetailView: View {
     }
     .navigationTitle(selectedWorktree?.name ?? loadingInfo?.name ?? "Supacode")
     .toolbar {
-      openToolbar(
-        isOpenDisabled: isOpenDisabled,
-        openActionSelection: openActionSelection,
-        showExtras: commandKeyObserver.isPressed
-      )
+      if hasActiveWorktree, let selectedWorktree {
+        worktreeToolbar(
+          branchName: selectedWorktree.name,
+          openActionSelection: openActionSelection,
+          showExtras: commandKeyObserver.isPressed
+        )
+      }
     }
     .focusedSceneValue(\.newTerminalAction, newTerminalAction)
     .focusedSceneValue(\.closeTabAction, closeTabAction)
@@ -95,16 +97,35 @@ struct WorktreeDetailView: View {
   }
 
   @ToolbarContentBuilder
-  private func openToolbar(
-    isOpenDisabled: Bool,
+  private func worktreeToolbar(
+    branchName: String,
     openActionSelection: OpenWorktreeAction,
     showExtras: Bool
   ) -> some ToolbarContent {
-    if !isOpenDisabled {
-      ToolbarItemGroup(placement: .primaryAction) {
-        openMenu(openActionSelection: openActionSelection, showExtras: showExtras)
-      }
+    ToolbarItem(placement: .principal) {
+        XcodeStyleStatusView()
     }
+      
+      #if DEBUG
+      ToolbarItem(placement: .automatic) {
+          Button("AUTOMATIC") { }.padding(.horizontal)
+
+      }
+      
+      ToolbarItem(placement: .primaryAction) {
+          Button("PR Button") { }.padding(.horizontal)
+      }
+      
+      
+      ToolbarItem(placement: .secondaryAction) {
+          Button("secpond") { }.padding(.horizontal)
+      }
+      #endif
+      
+      ToolbarItem(placement: .status) {
+          openMenu(openActionSelection: openActionSelection, showExtras: showExtras)
+      }
+      
   }
 
   @ViewBuilder
