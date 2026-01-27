@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		12E9231689003F2C79951A15 /* XcodeStyleToolbarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED463971B9461E5ECBBF65FE /* XcodeStyleToolbarViews.swift */; };
 		32513D1E25BB4F418CABB2A8 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 8B2985744DB94333AE1B5878 /* Sentry */; };
 		886A649F771240E8A5AC792D /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 8D787DCF45744283A83F226F /* Dependencies */; };
 		C8B33B9AFE69E738ABFA08BE /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 497B582F42253CBC8FBF101F /* ComposableArchitecture */; };
@@ -38,7 +37,6 @@
 		D6A1CB2F2F1F4A48004FDABD /* GhosttyKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = GhosttyKit.xcframework; sourceTree = "<group>"; };
 		D6A1CB342F1F4AC2004FDABD /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
 		D6F821012F1FCBC1004B4174 /* supacodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = supacodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		ED463971B9461E5ECBBF65FE /* XcodeStyleToolbarViews.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; path = XcodeStyleToolbarViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -92,38 +90,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		06D3031424A604C5C5DDBBCB /* supacode */ = {
-			isa = PBXGroup;
-			children = (
-				7CB8E823F75AD0C43E69F80D /* Features */,
-			);
-			path = supacode;
-			sourceTree = "<group>";
-		};
-		7CB8E823F75AD0C43E69F80D /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				ABD2418FB894805F47945939 /* Repositories */,
-			);
-			path = Features;
-			sourceTree = "<group>";
-		};
-		A5590D708C914844C4CD97D7 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				ED463971B9461E5ECBBF65FE /* XcodeStyleToolbarViews.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		ABD2418FB894805F47945939 /* Repositories */ = {
-			isa = PBXGroup;
-			children = (
-				A5590D708C914844C4CD97D7 /* Views */,
-			);
-			path = Repositories;
-			sourceTree = "<group>";
-		};
 		D69CE0412F1F378200584C57 = {
 			isa = PBXGroup;
 			children = (
@@ -134,7 +100,6 @@
 				D6F821022F1FCBC1004B4174 /* supacodeTests */,
 				D69CE04B2F1F378200584C57 /* Products */,
 				D6A1CB2E2F1F4A36004FDABD /* Frameworks */,
-				06D3031424A604C5C5DDBBCB /* supacode */,
 			);
 			sourceTree = "<group>";
 		};
@@ -280,7 +245,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				12E9231689003F2C79951A15 /* XcodeStyleToolbarViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
