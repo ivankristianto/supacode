@@ -6,6 +6,7 @@ struct XcodeStyleStatusView: View {
       Image(systemName: "checkmark.circle.fill")
         .foregroundStyle(.green)
         .font(.system(size: 14))
+        .accessibilityHidden(true)
 
       Text("Build Succeeded")
         .font(.system(size: 12))
@@ -39,6 +40,7 @@ struct XcodeStyleDiagnosticsView: View {
         Image(systemName: "exclamationmark.triangle.fill")
           .foregroundStyle(.yellow)
           .font(.system(size: 12))
+          .accessibilityHidden(true)
         Text("3")
           .font(.system(size: 12, weight: .medium, design: .rounded))
       }
@@ -50,6 +52,7 @@ struct XcodeStyleDiagnosticsView: View {
         Image(systemName: "xmark.circle.fill")
           .foregroundStyle(.red)
           .font(.system(size: 12))
+          .accessibilityHidden(true)
         Text("0")
           .font(.system(size: 12, weight: .medium, design: .rounded))
       }
@@ -60,7 +63,6 @@ struct XcodeStyleDiagnosticsView: View {
     .padding(.trailing, 4)
   }
 }
-
 
 #Preview("Status View") {
   XcodeStyleStatusView()

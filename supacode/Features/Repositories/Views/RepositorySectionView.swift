@@ -83,6 +83,7 @@ struct RepositorySectionView: View {
       .onTapGesture {
         toggleExpanded()
       }
+      .accessibilityAddTraits(.isButton)
       .disabled(isRemovingRepository)
       .contextMenu {
         Button("Repo Settings") {
