@@ -43,6 +43,7 @@ struct WorktreeRow: View {
             .controlSize(.small)
         }
       }
+      .frame(width: 16, height: 16)
       if hasInfo {
         VStack(alignment: .leading, spacing: 2) {
           Text(name)
