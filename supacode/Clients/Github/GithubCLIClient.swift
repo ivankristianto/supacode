@@ -6,12 +6,36 @@ struct GithubAuthStatus: Equatable, Sendable {
   let host: String
 }
 
-private struct GithubAuthStatusResponse: Decodable, Sendable {
+private struct GithubAuthStatusResponse: Sendable {
   let hosts: [String: [GithubAuthAccount]]
 
-  struct GithubAuthAccount: Decodable, Sendable {
+  struct GithubAuthAccount: Sendable {
     let active: Bool
     let login: String
+  }
+}
+
+extension GithubAuthStatusResponse: Decodable {
+  private enum CodingKeys: String, CodingKey {
+    case hosts
+  }
+
+  nonisolated init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    self.hosts = try container.decode([String: [GithubAuthAccount]].self, forKey: .hosts)
+  }
+}
+
+extension GithubAuthStatusResponse.GithubAuthAccount: Decodable {
+  private enum CodingKeys: String, CodingKey {
+    case active
+    case login
+  }
+
+  nonisolated init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    self.active = try container.decode(Bool.self, forKey: .active)
+    self.login = try container.decode(String.self, forKey: .login)
   }
 }
 
@@ -115,7 +139,7 @@ extension GithubCLIClient: DependencyKey {
           repoRoot: nil
         )
         let data = Data(output.utf8)
-        let response = try JSONDecoder().decode(GithubAuthStatusResponse.self, from: data)
+        let response = try decodeAuthStatusResponse(from: data)
         guard let (host, accounts) = response.hosts.first,
               let activeAccount = accounts.first(where: { $0.active }) else {
           return nil
@@ -181,4 +205,8 @@ nonisolated private func isUnsupportedStatusCheckRollupError(_ error: Error) -> 
     return false
   }
   return message.contains("unknown") || message.contains("unsupported") || message.contains("field")
+}
+
+nonisolated private func decodeAuthStatusResponse(from data: Data) throws -> GithubAuthStatusResponse {
+  try JSONDecoder().decode(GithubAuthStatusResponse.self, from: data)
 }
