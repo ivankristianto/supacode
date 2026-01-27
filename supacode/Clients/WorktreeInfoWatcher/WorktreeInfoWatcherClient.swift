@@ -7,11 +7,14 @@ struct WorktreeInfoWatcherClient {
 
   enum Command: Equatable {
     case setWorktrees([Worktree])
+    case setSelectedWorktreeID(Worktree.ID?)
     case stop
   }
 
   enum Event: Equatable {
     case branchChanged(worktreeID: Worktree.ID)
+    case filesChanged(worktreeID: Worktree.ID)
+    case pullRequestRefresh(worktreeID: Worktree.ID)
   }
 }
 

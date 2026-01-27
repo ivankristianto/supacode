@@ -104,6 +104,30 @@ struct RepositoriesFeatureTests {
     }
   }
 
+  @Test func worktreeInfoUpdatesDescription() async {
+    let worktree = makeWorktree(id: "/tmp/wt", name: "main")
+    let repository = makeRepository(id: "/tmp/repo", worktrees: [worktree])
+    let store = TestStore(initialState: RepositoriesFeature.State(repositories: [repository])) {
+      RepositoriesFeature()
+    }
+
+    await store.send(.worktreeLineChangesLoaded(worktreeID: worktree.id, added: 34, removed: 23)) {
+      $0.worktreeInfoByID[worktree.id] = WorktreeInfoEntry(
+        addedLines: 34,
+        removedLines: 23,
+        pullRequestNumber: nil
+      )
+    }
+
+    await store.send(.worktreePullRequestLoaded(worktreeID: worktree.id, number: 99)) {
+      $0.worktreeInfoByID[worktree.id] = WorktreeInfoEntry(
+        addedLines: 34,
+        removedLines: 23,
+        pullRequestNumber: 99
+      )
+    }
+  }
+
   @Test func orderedWorktreeRowsAreGlobal() {
     let repoA = makeRepository(
       id: "/tmp/repo-a",

@@ -19,6 +19,7 @@ struct RepositoriesFeature {
     var removingRepositoryIDs: Set<Repository.ID> = []
     var pinnedWorktreeIDs: [Worktree.ID] = []
     var shouldSelectFirstAfterReload = false
+    var worktreeInfoByID: [Worktree.ID: WorktreeInfoEntry] = [:]
     @Presents var alert: AlertState<Alert>?
   }
 
@@ -63,6 +64,8 @@ struct RepositoriesFeature {
     case presentAlert(title: String, message: String)
     case worktreeInfoEvent(WorktreeInfoWatcherClient.Event)
     case worktreeBranchNameLoaded(worktreeID: Worktree.ID, name: String)
+    case worktreeLineChangesLoaded(worktreeID: Worktree.ID, added: Int, removed: Int)
+    case worktreePullRequestLoaded(worktreeID: Worktree.ID, number: Int?)
     case alert(PresentationAction<Alert>)
     case delegate(Delegate)
   }
@@ -78,6 +81,7 @@ struct RepositoriesFeature {
   }
 
   @Dependency(\.gitClient) private var gitClient
+  @Dependency(\.githubCLI) private var githubCLI
   @Dependency(\.repositoryPersistence) private var repositoryPersistence
 
   var body: some Reducer<State, Action> {
@@ -471,10 +475,64 @@ struct RepositoriesFeature {
               await send(.worktreeBranchNameLoaded(worktreeID: worktreeID, name: name))
             }
           }
+        case .filesChanged(let worktreeID):
+          guard let worktree = state.worktree(for: worktreeID) else {
+            return .none
+          }
+          let worktreeURL = worktree.workingDirectory
+          let gitClient = gitClient
+          return .run { send in
+            if let changes = await gitClient.lineChanges(worktreeURL) {
+              await send(
+                .worktreeLineChangesLoaded(
+                  worktreeID: worktreeID,
+                  added: changes.added,
+                  removed: changes.removed
+                )
+              )
+            }
+          }
+        case .pullRequestRefresh(let worktreeID):
+          guard let worktree = state.worktree(for: worktreeID) else {
+            return .none
+          }
+          let githubCLI = githubCLI
+          let worktreeURL = worktree.workingDirectory
+          return .run { send in
+            guard await githubCLI.isAvailable() else {
+              await send(.worktreePullRequestLoaded(worktreeID: worktreeID, number: nil))
+              return
+            }
+            do {
+              let pullRequest = try await githubCLI.currentPullRequest(worktreeURL)
+              await send(
+                .worktreePullRequestLoaded(worktreeID: worktreeID, number: pullRequest?.number)
+              )
+            } catch {
+              await send(.worktreePullRequestLoaded(worktreeID: worktreeID, number: nil))
+            }
+          }
         }
 
       case .worktreeBranchNameLoaded(let worktreeID, let name):
         updateWorktreeName(worktreeID, name: name, state: &state)
+        return .none
+
+      case .worktreeLineChangesLoaded(let worktreeID, let added, let removed):
+        updateWorktreeLineChanges(
+          worktreeID: worktreeID,
+          added: added,
+          removed: removed,
+          state: &state
+        )
+        return .none
+
+      case .worktreePullRequestLoaded(let worktreeID, let number):
+        updateWorktreePullRequest(
+          worktreeID: worktreeID,
+          number: number,
+          state: &state
+        )
         return .none
 
       case .alert(.dismiss):
@@ -548,18 +606,23 @@ struct RepositoriesFeature {
     let filteredSetupScriptIDs = state.pendingSetupScriptWorktreeIDs.filter {
       availableWorktreeIDs.contains($0)
     }
+    let filteredWorktreeInfo = state.worktreeInfoByID.filter {
+      availableWorktreeIDs.contains($0.key)
+    }
     if animated {
       withAnimation {
         state.repositories = repositories
         state.pendingWorktrees = filteredPendingWorktrees
         state.deletingWorktreeIDs = filteredDeletingIDs
         state.pendingSetupScriptWorktreeIDs = filteredSetupScriptIDs
+        state.worktreeInfoByID = filteredWorktreeInfo
       }
     } else {
       state.repositories = repositories
       state.pendingWorktrees = filteredPendingWorktrees
       state.deletingWorktreeIDs = filteredDeletingIDs
       state.pendingSetupScriptWorktreeIDs = filteredSetupScriptIDs
+      state.worktreeInfoByID = filteredWorktreeInfo
     }
     if prunePinnedWorktreeIDs(state: &state) {
       repositoryPersistence.savePinnedWorktreeIDs(state.pinnedWorktreeIDs)
@@ -611,6 +674,10 @@ struct RepositoriesFeature {
 }
 
 extension RepositoriesFeature.State {
+  func worktreeDescription(for worktreeID: Worktree.ID) -> String? {
+    worktreeInfoByID[worktreeID]?.descriptionText
+  }
+
   var canCreateWorktree: Bool {
     if repositories.isEmpty {
       return false
@@ -645,6 +712,7 @@ extension RepositoriesFeature.State {
         repositoryID: pending.repositoryID,
         name: pending.name,
         detail: pending.detail,
+        description: worktreeDescription(for: pending.id),
         isPinned: false,
         isMainWorktree: false,
         isPending: true,
@@ -662,6 +730,7 @@ extension RepositoriesFeature.State {
           repositoryID: repository.id,
           name: worktree.name,
           detail: worktree.detail,
+          description: worktreeDescription(for: worktree.id),
           isPinned: pinnedWorktreeIDs.contains(worktree.id),
           isMainWorktree: isMainWorktree(worktree),
           isPending: false,
@@ -731,6 +800,7 @@ extension RepositoriesFeature.State {
           repositoryID: repository.id,
           name: mainWorktree.name,
           detail: mainWorktree.detail,
+          description: worktreeDescription(for: mainWorktree.id),
           isPinned: false,
           isMainWorktree: true,
           isPending: false,
@@ -750,6 +820,7 @@ extension RepositoriesFeature.State {
           repositoryID: repository.id,
           name: worktree.name,
           detail: worktree.detail,
+          description: worktreeDescription(for: worktree.id),
           isPinned: true,
           isMainWorktree: false,
           isPending: false,
@@ -765,6 +836,7 @@ extension RepositoriesFeature.State {
           repositoryID: pending.repositoryID,
           name: pending.name,
           detail: pending.detail,
+          description: worktreeDescription(for: pending.id),
           isPinned: false,
           isMainWorktree: false,
           isPending: true,
@@ -784,6 +856,7 @@ extension RepositoriesFeature.State {
           repositoryID: repository.id,
           name: worktree.name,
           detail: worktree.detail,
+          description: worktreeDescription(for: worktree.id),
           isPinned: false,
           isMainWorktree: false,
           isPending: false,
@@ -854,6 +927,36 @@ private func updateWorktreeName(
     )
     state.repositories[index] = repository
     return
+  }
+}
+
+private func updateWorktreeLineChanges(
+  worktreeID: Worktree.ID,
+  added: Int,
+  removed: Int,
+  state: inout RepositoriesFeature.State
+) {
+  var entry = state.worktreeInfoByID[worktreeID] ?? WorktreeInfoEntry()
+  entry.addedLines = added
+  entry.removedLines = removed
+  if entry.descriptionText == nil {
+    state.worktreeInfoByID.removeValue(forKey: worktreeID)
+  } else {
+    state.worktreeInfoByID[worktreeID] = entry
+  }
+}
+
+private func updateWorktreePullRequest(
+  worktreeID: Worktree.ID,
+  number: Int?,
+  state: inout RepositoriesFeature.State
+) {
+  var entry = state.worktreeInfoByID[worktreeID] ?? WorktreeInfoEntry()
+  entry.pullRequestNumber = number
+  if entry.descriptionText == nil {
+    state.worktreeInfoByID.removeValue(forKey: worktreeID)
+  } else {
+    state.worktreeInfoByID[worktreeID] = entry
   }
 }
 

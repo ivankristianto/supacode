@@ -185,6 +185,35 @@ struct GitClient {
     return worktree.workingDirectory
   }
 
+  nonisolated func lineChanges(at worktreeURL: URL) async -> (added: Int, removed: Int)? {
+    let path = worktreeURL.path(percentEncoded: false)
+    do {
+      let unstaged = try await runGit(arguments: ["-C", path, "diff", "--numstat"])
+      let staged = try await runGit(arguments: ["-C", path, "diff", "--cached", "--numstat"])
+      let unstagedChanges = parseNumstat(unstaged)
+      let stagedChanges = parseNumstat(staged)
+      return (
+        added: unstagedChanges.added + stagedChanges.added,
+        removed: unstagedChanges.removed + stagedChanges.removed
+      )
+    } catch {
+      return nil
+    }
+  }
+
+  nonisolated private func parseNumstat(_ output: String) -> (added: Int, removed: Int) {
+    output
+      .split(whereSeparator: \.isNewline)
+      .reduce(into: (added: 0, removed: 0)) { result, line in
+        let parts = line.split(separator: "\t", omittingEmptySubsequences: false)
+        guard parts.count >= 2 else { return }
+        let added = Int(parts[0]) ?? 0
+        let removed = Int(parts[1]) ?? 0
+        result.added += added
+        result.removed += removed
+      }
+  }
+
   nonisolated private func runGit(arguments: [String]) async throws -> String {
     let env = URL(fileURLWithPath: "/usr/bin/env")
     let command = ([env.path(percentEncoded: false)] + ["git"] + arguments).joined(separator: " ")

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WorktreeRow: View {
   let name: String
+  let description: String?
   let isPinned: Bool
   let isMainWorktree: Bool
   let isLoading: Bool
@@ -24,7 +25,14 @@ struct WorktreeRow: View {
             .controlSize(.small)
         }
       }
-      Text(name)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(name)
+        if let description {
+          Text(description)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
       Spacer(minLength: 8)
       if showsNotificationIndicator {
         Image(systemName: "bell.fill")
