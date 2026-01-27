@@ -10,23 +10,38 @@ struct WorktreeDetailTitleView: View {
 
   var body: some View {
     if isEditing {
-      TextField("Branch", text: $draftName)
-        .textFieldStyle(.plain)
-        .focused($isFocused)
-        .onSubmit { commit() }
-        .onExitCommand { cancel() }
-        .onChange(of: isFocused) { _, isFocused in
-          if !isFocused {
-            cancel()
+      HStack(spacing: 6) {
+        Image(systemName: "arrow.trianglehead.branch")
+          .foregroundStyle(.secondary)
+          .accessibilityHidden(true)
+        TextField("Branch", text: $draftName)
+          .textFieldStyle(.plain)
+          .focused($isFocused)
+          .onSubmit { commit() }
+          .onExitCommand { cancel() }
+          .onChange(of: isFocused) { _, isFocused in
+            if !isFocused {
+              cancel()
+            }
           }
-        }
-        .help("Rename branch (Return to confirm)")
+      }
+      .font(.headline)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .help("Rename branch (Return to confirm)")
     } else {
       Button {
         beginEditing()
       } label: {
-        Text(branchName)
-          .font(.headline)
+        HStack(spacing: 6) {
+          Image(systemName: "arrow.trianglehead.branch")
+            .foregroundStyle(.secondary)
+            .accessibilityHidden(true)
+          Text(branchName)
+        }
+        .font(.headline)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
       }
       .buttonStyle(.plain)
       .help("Rename branch (no shortcut)")
