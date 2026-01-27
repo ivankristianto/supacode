@@ -108,7 +108,7 @@ struct WorktreeDetailView: View {
       
       #if DEBUG
       ToolbarItem(placement: .automatic) {
-          Button("AUTOMATIC") { }.padding(.horizontal)
+          openMenu(openActionSelection: openActionSelection, showExtras: showExtras)
 
       }
       
@@ -120,11 +120,12 @@ struct WorktreeDetailView: View {
       ToolbarItem(placement: .secondaryAction) {
           Button("secpond") { }.padding(.horizontal)
       }
-      #endif
       
       ToolbarItem(placement: .status) {
-          openMenu(openActionSelection: openActionSelection, showExtras: showExtras)
+          Button("status") { }.padding(.horizontal)
       }
+      #endif
+
       
   }
 
