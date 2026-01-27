@@ -17,6 +17,12 @@ struct WorktreeDetailTitleView: View {
         TextField("Branch", text: $draftName)
           .textFieldStyle(.plain)
           .focused($isFocused)
+          .onChange(of: draftName) { _, newValue in
+            let filtered = String(newValue.filter { !$0.isWhitespace })
+            if filtered != newValue {
+              draftName = filtered
+            }
+          }
           .onSubmit { commit() }
           .onExitCommand { cancel() }
           .onChange(of: isFocused) { _, isFocused in
