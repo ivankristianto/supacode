@@ -28,6 +28,7 @@ struct WorktreeDetailTitleView: View {
       .font(.headline)
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
+      .task { isFocused = true }
       .help("Rename branch (Return to confirm)")
     } else {
       Button {
@@ -51,7 +52,6 @@ struct WorktreeDetailTitleView: View {
   private func beginEditing() {
     draftName = branchName
     isEditing = true
-    isFocused = true
   }
 
   private func cancel() {
