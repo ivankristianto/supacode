@@ -25,49 +25,80 @@ struct GhosttySurfaceSearchOverlay: View {
 
   var body: some View {
     GeometryReader { geo in
-      HStack(spacing: 4) {
-        GhosttySearchField(
-          text: $searchText,
-          isFocused: isSearchFieldFocused,
-          onSubmit: { isShifted in
-            navigateSearch(isShifted ? .previous : .next)
-          },
-          onEscape: {
-            surfaceView.requestFocus()
+      ZStack(alignment: corner.alignment) {
+        HStack(spacing: 4) {
+          GhosttySearchField(
+            text: $searchText,
+            isFocused: isSearchFieldFocused,
+            onSubmit: { isShifted in
+              navigateSearch(isShifted ? .previous : .next)
+            },
+            onEscape: {
+              surfaceView.requestFocus()
+            }
+          )
+          .frame(width: 180)
+          .padding(.leading, 8)
+          .padding(.trailing, 50)
+          .padding(.vertical, 6)
+          .background(Color.primary.opacity(0.1))
+          .clipShape(.rect(cornerRadius: 6))
+          .overlay(alignment: .trailing) {
+            matchLabel
+          }
+
+          Button("Next", systemImage: "chevron.up") {
+            navigateSearch(.next)
+          }
+          .buttonStyle(GhosttySearchButtonStyle())
+          .help(helpText("Next Match", shortcut: ghosttyShortcuts.display(for: "navigate_search:next")))
+
+          Button("Previous", systemImage: "chevron.down") {
+            navigateSearch(.previous)
+          }
+          .buttonStyle(GhosttySearchButtonStyle())
+          .help(helpText("Previous Match", shortcut: ghosttyShortcuts.display(for: "navigate_search:previous")))
+
+          Button("End Search", systemImage: "xmark") {
+            closeSearch()
+          }
+          .buttonStyle(GhosttySearchButtonStyle())
+          .help(helpText("End Search", shortcut: ghosttyShortcuts.display(for: "end_search")))
+        }
+        .padding(8)
+        .background(.background)
+        .clipShape(GhosttySearchOverlayShape())
+        .shadow(radius: 4)
+        .background(
+          GeometryReader { barGeo in
+            Color.clear.onAppear {
+              barSize = barGeo.size
+            }
           }
         )
-        .frame(width: 180)
-        .padding(.leading, 8)
-        .padding(.trailing, 50)
-        .padding(.vertical, 6)
-        .background(Color.primary.opacity(0.1))
-        .clipShape(.rect(cornerRadius: 6))
-        .overlay(alignment: .trailing) {
-          matchLabel
-        }
-
-        Button("Next", systemImage: "chevron.up") {
-          navigateSearch(.next)
-        }
-        .buttonStyle(GhosttySearchButtonStyle())
-        .help(helpText("Next Match", shortcut: ghosttyShortcuts.display(for: "navigate_search:next")))
-
-        Button("Previous", systemImage: "chevron.down") {
-          navigateSearch(.previous)
-        }
-        .buttonStyle(GhosttySearchButtonStyle())
-        .help(helpText("Previous Match", shortcut: ghosttyShortcuts.display(for: "navigate_search:previous")))
-
-        Button("End Search", systemImage: "xmark") {
-          closeSearch()
-        }
-        .buttonStyle(GhosttySearchButtonStyle())
-        .help(helpText("End Search", shortcut: ghosttyShortcuts.display(for: "end_search")))
+        .padding(overlayPadding)
+        .offset(dragOffset)
+        .contentShape(.rect)
+        .gesture(
+          DragGesture()
+            .onChanged { value in
+              dragOffset = value.translation
+            }
+            .onEnded { value in
+              let centerPos = centerPosition(for: corner, in: geo.size, barSize: barSize)
+              let newCenter = CGPoint(
+                x: centerPos.x + value.translation.width,
+                y: centerPos.y + value.translation.height
+              )
+              let newCorner = closestCorner(to: newCenter, in: geo.size)
+              withAnimation(.easeOut(duration: 0.2)) {
+                corner = newCorner
+                dragOffset = .zero
+              }
+            }
+        )
       }
-      .padding(8)
-      .background(.background)
-      .clipShape(GhosttySearchOverlayShape())
-      .shadow(radius: 4)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: corner.alignment)
       .onAppear {
         focusSearchField()
         scheduleSearch(searchText)
@@ -89,34 +120,6 @@ struct GhosttySurfaceSearchOverlay: View {
         searchTask?.cancel()
         searchTask = nil
       }
-      .background(
-        GeometryReader { barGeo in
-          Color.clear.onAppear {
-            barSize = barGeo.size
-          }
-        }
-      )
-      .padding(overlayPadding)
-      .offset(dragOffset)
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: corner.alignment)
-      .gesture(
-        DragGesture()
-          .onChanged { value in
-            dragOffset = value.translation
-          }
-          .onEnded { value in
-            let centerPos = centerPosition(for: corner, in: geo.size, barSize: barSize)
-            let newCenter = CGPoint(
-              x: centerPos.x + value.translation.width,
-              y: centerPos.y + value.translation.height
-            )
-            let newCorner = closestCorner(to: newCenter, in: geo.size)
-            withAnimation(.easeOut(duration: 0.2)) {
-              corner = newCorner
-              dragOffset = .zero
-            }
-          }
-      )
     }
   }
 
