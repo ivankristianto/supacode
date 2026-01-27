@@ -49,9 +49,13 @@ struct PullRequestStatusModel: Equatable {
       self.url = url
       return
     }
-    let pendingCount = summary.pending + summary.ignored
-    if pendingCount > 0 {
-      self.label = prefix + "\(pendingCount) checks pending"
+    if summary.pending > 0 {
+      self.label = prefix + "\(summary.pending) checks pending"
+      self.url = url
+      return
+    }
+    if summary.ignored > 0 {
+      self.label = prefix + "\(summary.ignored) checks skipped"
       self.url = url
       return
     }
