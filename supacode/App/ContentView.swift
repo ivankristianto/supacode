@@ -66,15 +66,6 @@ struct ContentView: View {
     .alert(store: store.scope(state: \.$alert, action: \.alert))
     .focusedSceneValue(\.toggleLeftSidebarAction, toggleLeftSidebar)
     .focusedSceneValue(\.toggleRightSidebarAction, toggleRightSidebar)
-    .toolbar(removing: .sidebarToggle)
-    .toolbar {
-      ToolbarItem(placement: .navigation) {
-        Button(action: toggleLeftSidebar) {
-          Image(systemName: "sidebar.leading")
-        }
-        .help("Toggle Sidebar (\(AppShortcuts.toggleLeftSidebar.display))")
-      }
-    }
   }
 
   private func toggleLeftSidebar() {
