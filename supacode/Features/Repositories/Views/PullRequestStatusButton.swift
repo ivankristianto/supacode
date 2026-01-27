@@ -10,7 +10,8 @@ struct PullRequestStatusButton: View {
         openURL(url)
       }
     }
-    .buttonStyle(.plain)
+    .buttonStyle(.bordered)
+    .controlSize(.small)
     .font(.caption)
     .monospaced()
     .help("Open pull request on GitHub")
