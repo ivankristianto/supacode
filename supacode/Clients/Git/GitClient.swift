@@ -350,6 +350,7 @@ nonisolated private func wrapShellError(
   } else {
     gitError = .commandFailed(command: command, message: error.localizedDescription)
   }
+  #if !DEBUG
   SentrySDK.logger.error(
     "git command failed",
     attributes: [
@@ -357,6 +358,7 @@ nonisolated private func wrapShellError(
       "exit_code": Int(exitCode),
     ]
   )
+  #endif
   return gitError
 }
 

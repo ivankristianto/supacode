@@ -296,7 +296,9 @@ private struct ActionLabelReducer<Base: Reducer>: Reducer {
   func reduce(into state: inout Base.State, action: Base.Action) -> Effect<Base.Action> {
     let actionLabel = debugCaseOutput(action)
     print("received action: \(actionLabel)")
+    #if !DEBUG
     SentrySDK.logger.info("received action: \(actionLabel)")
+    #endif
     return base.reduce(into: &state, action: action)
   }
 }
