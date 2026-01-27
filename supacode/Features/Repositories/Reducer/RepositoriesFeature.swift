@@ -937,8 +937,13 @@ private func updateWorktreeLineChanges(
   state: inout RepositoriesFeature.State
 ) {
   var entry = state.worktreeInfoByID[worktreeID] ?? WorktreeInfoEntry()
-  entry.addedLines = added
-  entry.removedLines = removed
+  if added == 0 && removed == 0 {
+    entry.addedLines = nil
+    entry.removedLines = nil
+  } else {
+    entry.addedLines = added
+    entry.removedLines = removed
+  }
   if entry.descriptionText == nil {
     state.worktreeInfoByID.removeValue(forKey: worktreeID)
   } else {
