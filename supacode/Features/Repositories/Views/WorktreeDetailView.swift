@@ -35,10 +35,12 @@ struct WorktreeDetailView: View {
         WorktreeLoadingView(info: loadingInfo)
       } else if let selectedWorktree {
         let shouldRunSetupScript = repositories.pendingSetupScriptWorktreeIDs.contains(selectedWorktree.id)
+        let shouldFocusTerminal = repositories.shouldFocusTerminal(for: selectedWorktree.id)
         WorktreeTerminalTabsView(
           worktree: selectedWorktree,
           manager: terminalManager,
           shouldRunSetupScript: shouldRunSetupScript,
+          forceAutoFocus: shouldFocusTerminal,
           createTab: { store.send(.newTerminal) }
         )
         .id(selectedWorktree.id)
@@ -46,6 +48,9 @@ struct WorktreeDetailView: View {
         .onAppear {
           if shouldRunSetupScript {
             store.send(.repositories(.consumeSetupScript(selectedWorktree.id)))
+          }
+          if shouldFocusTerminal {
+            store.send(.repositories(.consumeTerminalFocus(selectedWorktree.id)))
           }
         }
       } else {
