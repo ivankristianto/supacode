@@ -1,4 +1,5 @@
 import Observation
+import Sharing
 
 @MainActor
 @Observable
@@ -15,8 +16,8 @@ final class WorktreeTerminalManager {
 
   func handleCommand(_ command: TerminalClient.Command) {
     switch command {
-    case .createTab(let worktree):
-      createTab(in: worktree)
+    case .createTab(let worktree, let runSetupScriptIfNew):
+      Task { createTabAsync(in: worktree, runSetupScriptIfNew: runSetupScriptIfNew) }
     case .runScript(let worktree, let script):
       _ = state(for: worktree).runScript(script)
     case .stopRunScript(let worktree):
@@ -58,6 +59,9 @@ final class WorktreeTerminalManager {
     runSetupScriptIfNew: () -> Bool = { false }
   ) -> WorktreeTerminalState {
     if let existing = states[worktree.id] {
+      if runSetupScriptIfNew() {
+        existing.enableSetupScriptIfNeeded()
+      }
       return existing
     }
     let runSetupScript = runSetupScriptIfNew()
@@ -92,9 +96,17 @@ final class WorktreeTerminalManager {
     return state
   }
 
-  func createTab(in worktree: Worktree) {
-    let state = state(for: worktree)
-    _ = state.createTab()
+  private func createTabAsync(in worktree: Worktree, runSetupScriptIfNew: Bool) {
+    let state = state(for: worktree) { runSetupScriptIfNew }
+    let setupScript: String?
+    if state.needsSetupScript() {
+      @SharedReader(.repositorySettings(worktree.repositoryRootURL))
+      var settings = RepositorySettings.default
+      setupScript = settings.setupScript
+    } else {
+      setupScript = nil
+    }
+    _ = state.createTab(setupScript: setupScript)
   }
 
   @discardableResult

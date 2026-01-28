@@ -10,6 +10,7 @@
 		32513D1E25BB4F418CABB2A8 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 8B2985744DB94333AE1B5878 /* Sentry */; };
 		886A649F771240E8A5AC792D /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 8D787DCF45744283A83F226F /* Dependencies */; };
 		C8B33B9AFE69E738ABFA08BE /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 497B582F42253CBC8FBF101F /* ComposableArchitecture */; };
+		D63D00F72F2A5EEE00018D05 /* DependenciesTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = D63D00F62F2A5EEE00018D05 /* DependenciesTestSupport */; };
 		D64162B02F23CAF100260CA3 /* ghostty in Resources */ = {isa = PBXBuildFile; fileRef = D64162AD2F23CAF100260CA3 /* ghostty */; };
 		D64162B12F23CAF100260CA3 /* terminfo in Resources */ = {isa = PBXBuildFile; fileRef = D64162AE2F23CAF100260CA3 /* terminfo */; };
 		D64162B22F23CAF100260CA3 /* git-wt in Resources */ = {isa = PBXBuildFile; fileRef = D64162AF2F23CAF100260CA3 /* git-wt */; };
@@ -84,6 +85,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D63D00F72F2A5EEE00018D05 /* DependenciesTestSupport in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,6 +171,7 @@
 			);
 			name = supacodeTests;
 			packageProductDependencies = (
+				D63D00F62F2A5EEE00018D05 /* DependenciesTestSupport */,
 			);
 			productName = supacodeTests;
 			productReference = D6F821012F1FCBC1004B4174 /* supacodeTests.xctest */;
@@ -643,6 +646,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8E10C2184F9342AC850013F5 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		D63D00F62F2A5EEE00018D05 /* DependenciesTestSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 46ECCA2394D141A89BE74516 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = DependenciesTestSupport;
 		};
 		D661760A2F250A60000FC27C /* CasePaths */ = {
 			isa = XCSwiftPackageProductDependency;

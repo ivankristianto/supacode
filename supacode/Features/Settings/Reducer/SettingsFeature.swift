@@ -10,6 +10,8 @@ struct SettingsFeature {
     var updatesAutomaticallyDownloadUpdates: Bool
     var inAppNotificationsEnabled: Bool
     var notificationSoundEnabled: Bool
+    var selection: SettingsSection = .general
+    var repositorySettings: RepositorySettingsFeature.State?
 
     init(settings: GlobalSettings = .default) {
       appearanceMode = settings.appearanceMode
@@ -32,11 +34,14 @@ struct SettingsFeature {
 
   enum Action: Equatable {
     case task
+    case settingsLoaded(GlobalSettings)
     case setAppearanceMode(AppearanceMode)
     case setUpdatesAutomaticallyCheckForUpdates(Bool)
     case setUpdatesAutomaticallyDownloadUpdates(Bool)
     case setInAppNotificationsEnabled(Bool)
     case setNotificationSoundEnabled(Bool)
+    case setSelection(SettingsSection)
+    case repositorySettings(RepositorySettingsFeature.Action)
     case delegate(Delegate)
   }
 
@@ -50,43 +55,82 @@ struct SettingsFeature {
     Reduce { state, action in
       switch action {
       case .task:
-        let settings = settingsClient.load()
-        state = State(settings: settings)
+        return .run { send in
+          let settings = await settingsClient.load()
+          await send(.settingsLoaded(settings))
+        }
+
+      case .settingsLoaded(let settings):
+        state.appearanceMode = settings.appearanceMode
+        state.updatesAutomaticallyCheckForUpdates = settings.updatesAutomaticallyCheckForUpdates
+        state.updatesAutomaticallyDownloadUpdates = settings.updatesAutomaticallyDownloadUpdates
+        state.inAppNotificationsEnabled = settings.inAppNotificationsEnabled
+        state.notificationSoundEnabled = settings.notificationSoundEnabled
         return .send(.delegate(.settingsChanged(settings)))
 
       case .setAppearanceMode(let mode):
         state.appearanceMode = mode
         let settings = state.globalSettings
-        settingsClient.save(settings)
-        return .send(.delegate(.settingsChanged(settings)))
+        return .merge(
+          .send(.delegate(.settingsChanged(settings))),
+          .run { _ in
+            await settingsClient.save(settings)
+          }
+        )
 
       case .setUpdatesAutomaticallyCheckForUpdates(let value):
         state.updatesAutomaticallyCheckForUpdates = value
         let settings = state.globalSettings
-        settingsClient.save(settings)
-        return .send(.delegate(.settingsChanged(settings)))
+        return .merge(
+          .send(.delegate(.settingsChanged(settings))),
+          .run { _ in
+            await settingsClient.save(settings)
+          }
+        )
 
       case .setUpdatesAutomaticallyDownloadUpdates(let value):
         state.updatesAutomaticallyDownloadUpdates = value
         let settings = state.globalSettings
-        settingsClient.save(settings)
-        return .send(.delegate(.settingsChanged(settings)))
+        return .merge(
+          .send(.delegate(.settingsChanged(settings))),
+          .run { _ in
+            await settingsClient.save(settings)
+          }
+        )
 
       case .setInAppNotificationsEnabled(let value):
         state.inAppNotificationsEnabled = value
         let settings = state.globalSettings
-        settingsClient.save(settings)
-        return .send(.delegate(.settingsChanged(settings)))
+        return .merge(
+          .send(.delegate(.settingsChanged(settings))),
+          .run { _ in
+            await settingsClient.save(settings)
+          }
+        )
 
       case .setNotificationSoundEnabled(let value):
         state.notificationSoundEnabled = value
         let settings = state.globalSettings
-        settingsClient.save(settings)
-        return .send(.delegate(.settingsChanged(settings)))
+        return .merge(
+          .send(.delegate(.settingsChanged(settings))),
+          .run { _ in
+            await settingsClient.save(settings)
+          }
+        )
+
+      case .setSelection(let selection):
+        state.selection = selection
+        return .none
+
+      case .repositorySettings:
+        return .none
 
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.repositorySettings, action: \.repositorySettings) {
+      RepositorySettingsFeature()
     }
   }
 }

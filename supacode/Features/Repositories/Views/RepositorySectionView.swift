@@ -12,11 +12,7 @@ struct RepositorySectionView: View {
     let isExpanded = expandedRepoIDs.contains(repository.id)
     let isRemovingRepository = state.isRemovingRepository(repository)
     let openRepoSettings = {
-      _ = Task { @MainActor in
-        SettingsWindowManager.shared.show()
-        await Task.yield()
-        NotificationCenter.default.post(name: .openRepositorySettings, object: repository.id)
-      }
+      _ = store.send(.openRepositorySettings(repository.id))
     }
     Section {
       WorktreeRowsView(

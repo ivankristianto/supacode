@@ -14,16 +14,22 @@ private extension View {
 
 struct SettingsView: View {
   @Bindable var store: StoreOf<AppFeature>
-  @State private var selection: SettingsSection? = .general
 
   var body: some View {
     let settingsStore = store.scope(state: \.settings, action: \.settings)
     let updatesStore = store.scope(state: \.updates, action: \.updates)
     let repositories = store.repositories.repositories
+    let selection = store.settings.selection
+    let selectionBinding = Binding<SettingsSection?>(
+      get: { store.settings.selection },
+      set: { selection in
+        store.send(.settings(.setSelection(selection ?? .general)))
+      }
+    )
 
     NavigationSplitView(columnVisibility: .constant(.all)) {
       VStack(spacing: 0) {
-        List(selection: $selection) {
+        List(selection: selectionBinding) {
           Label("General", systemImage: "gearshape")
             .tag(SettingsSection.general)
           Label("Notifications", systemImage: "bell")
@@ -74,10 +80,14 @@ struct SettingsView: View {
       case .repository(let repositoryID):
         if let repository = repositories.first(where: { $0.id == repositoryID }) {
           SettingsDetailView {
-            RepositorySettingsContainerView(repository: repository)
-              .id(repository.id)
-            .navigationTitle(repository.name)
-            .navigationSubtitle(repository.rootURL.path(percentEncoded: false))
+            IfLetStore(
+              settingsStore.scope(state: \.repositorySettings, action: \.repositorySettings)
+            ) { repositorySettingsStore in
+              RepositorySettingsView(store: repositorySettingsStore)
+                .id(repository.id)
+                .navigationTitle(repository.name)
+                .navigationSubtitle(repository.rootURL.path(percentEncoded: false))
+            }
           }
         } else {
           SettingsDetailView {
@@ -86,12 +96,6 @@ struct SettingsView: View {
               .frame(maxWidth: .infinity, alignment: .leading)
               .navigationTitle("Repositories")
           }
-        }
-      case .none:
-        SettingsDetailView {
-          AppearanceSettingsView(store: settingsStore)
-            .navigationTitle("General")
-            .navigationSubtitle("Appearance and preferences")
         }
       }
     }
@@ -105,16 +109,5 @@ struct SettingsView: View {
     .frame(minWidth: 750, minHeight: 500)
     .background(WindowLevelSetter(level: .floating))
     .ignoresSafeArea(.container, edges: .top)
-    .onChange(of: repositories) { _, updatedRepositories in
-      guard case .repository(let repositoryID) = selection else { return }
-      if !updatedRepositories.contains(where: { $0.id == repositoryID }) {
-        selection = .general
-      }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .openRepositorySettings)) { notification in
-      if let repositoryID = notification.object as? Repository.ID {
-        selection = .repository(repositoryID)
-      }
-    }
   }
 }

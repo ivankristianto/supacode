@@ -1,30 +1,35 @@
 import ComposableArchitecture
+import Sharing
 
 struct RepositoryPersistenceClient {
-  var loadRoots: @Sendable () -> [String]
-  var saveRoots: @Sendable ([String]) -> Void
-  var loadPinnedWorktreeIDs: @Sendable () -> [Worktree.ID]
-  var savePinnedWorktreeIDs: @Sendable ([Worktree.ID]) -> Void
+  var loadRoots: @Sendable () async -> [String]
+  var saveRoots: @Sendable ([String]) async -> Void
+  var loadPinnedWorktreeIDs: @Sendable () async -> [Worktree.ID]
+  var savePinnedWorktreeIDs: @Sendable ([Worktree.ID]) async -> Void
 }
 
 extension RepositoryPersistenceClient: DependencyKey {
   static let liveValue: RepositoryPersistenceClient = {
     return RepositoryPersistenceClient(
       loadRoots: {
-        SettingsStorage().load().repositoryRoots
+        @Shared(.repositoryRoots) var roots: [String]
+        return roots
       },
       saveRoots: { roots in
-        var settings = SettingsStorage().load()
-        settings.repositoryRoots = roots
-        SettingsStorage().save(settings)
+        @Shared(.repositoryRoots) var sharedRoots: [String]
+        $sharedRoots.withLock {
+          $0 = roots
+        }
       },
       loadPinnedWorktreeIDs: {
-        SettingsStorage().load().pinnedWorktreeIDs
+        @Shared(.pinnedWorktreeIDs) var pinned: [Worktree.ID]
+        return pinned
       },
       savePinnedWorktreeIDs: { ids in
-        var settings = SettingsStorage().load()
-        settings.pinnedWorktreeIDs = ids
-        SettingsStorage().save(settings)
+        @Shared(.pinnedWorktreeIDs) var sharedPinned: [Worktree.ID]
+        $sharedPinned.withLock {
+          $0 = ids
+        }
       }
     )
   }()

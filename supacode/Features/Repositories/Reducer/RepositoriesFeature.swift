@@ -28,6 +28,7 @@ struct RepositoriesFeature {
     case task
     case setOpenPanelPresented(Bool)
     case loadPersistedRepositories
+    case pinnedWorktreeIDsLoaded([Worktree.ID])
     case refreshWorktrees
     case reloadRepositories(animated: Bool)
     case repositoriesLoaded([Repository], failures: [LoadFailure], roots: [URL], animated: Bool)
@@ -74,6 +75,7 @@ struct RepositoriesFeature {
     case worktreeBranchNameLoaded(worktreeID: Worktree.ID, name: String)
     case worktreeLineChangesLoaded(worktreeID: Worktree.ID, added: Int, removed: Int)
     case worktreePullRequestLoaded(worktreeID: Worktree.ID, pullRequest: GithubPullRequest?)
+    case openRepositorySettings(Repository.ID)
     case alert(PresentationAction<Alert>)
     case delegate(Delegate)
   }
@@ -91,6 +93,7 @@ struct RepositoriesFeature {
   enum Delegate: Equatable {
     case selectedWorktreeChanged(Worktree?)
     case repositoriesChanged([Repository])
+    case openRepositorySettings(Repository.ID)
   }
 
   @Dependency(\.gitClient) private var gitClient
@@ -101,8 +104,15 @@ struct RepositoriesFeature {
     Reduce { state, action in
       switch action {
       case .task:
-        state.pinnedWorktreeIDs = repositoryPersistence.loadPinnedWorktreeIDs()
-        return .send(.loadPersistedRepositories)
+        return .run { send in
+          let pinned = await repositoryPersistence.loadPinnedWorktreeIDs()
+          await send(.pinnedWorktreeIDsLoaded(pinned))
+          await send(.loadPersistedRepositories)
+        }
+
+      case .pinnedWorktreeIDsLoaded(let pinnedWorktreeIDs):
+        state.pinnedWorktreeIDs = pinnedWorktreeIDs
+        return .none
 
       case .setOpenPanelPresented(let isPresented):
         state.isOpenPanelPresented = isPresented
@@ -110,9 +120,21 @@ struct RepositoriesFeature {
 
       case .loadPersistedRepositories:
         state.alert = nil
-        let rootPaths = uniqueRootPaths(repositoryPersistence.loadRoots())
-        let roots = rootPaths.map { URL(fileURLWithPath: $0) }
-        return loadRepositories(roots, animated: false)
+        return .run { send in
+          let loadedPaths = await repositoryPersistence.loadRoots()
+          let rootPaths = RepositoryPathNormalizer.normalize(loadedPaths)
+          let roots = rootPaths.map { URL(fileURLWithPath: $0) }
+          let (repositories, failures) = await loadRepositoriesData(roots)
+          await send(
+            .repositoriesLoaded(
+              repositories,
+              failures: failures,
+              roots: roots,
+              animated: false
+            )
+          )
+        }
+        .cancellable(id: CancelID.load, cancelInFlight: true)
 
       case .refreshWorktrees:
         return .send(.reloadRepositories(animated: false))
@@ -131,7 +153,11 @@ struct RepositoriesFeature {
           failures: failures,
           previous: state.repositories
         )
-        applyRepositories(mergedRepositories, state: &state, animated: animated)
+        let didPrunePinned = applyRepositories(
+          mergedRepositories,
+          state: &state,
+          animated: animated
+        )
         let errors = failures.map(\.message)
         if !errors.isEmpty {
           state.alert = errorAlert(
@@ -147,14 +173,19 @@ struct RepositoriesFeature {
         if selectionChanged {
           allEffects.append(.send(.delegate(.selectedWorktreeChanged(selectedWorktree))))
         }
+        if didPrunePinned {
+          let pinnedWorktreeIDs = state.pinnedWorktreeIDs
+          allEffects.append(.run { _ in
+            await repositoryPersistence.savePinnedWorktreeIDs(pinnedWorktreeIDs)
+          })
+        }
         return .merge(allEffects)
 
       case .openRepositories(let urls):
         state.alert = nil
         return .run { send in
-          let existingRootPaths = await MainActor.run {
-            uniqueRootPaths(repositoryPersistence.loadRoots())
-          }
+          let loadedPaths = await repositoryPersistence.loadRoots()
+          let existingRootPaths = RepositoryPathNormalizer.normalize(loadedPaths)
           var resolvedRoots: [URL] = []
           var invalidRoots: [String] = []
           for url in urls {
@@ -165,21 +196,12 @@ struct RepositoriesFeature {
               invalidRoots.append(url.path(percentEncoded: false))
             }
           }
-          var mergedPaths = existingRootPaths
-          for root in resolvedRoots {
-            let normalized = root.standardizedFileURL.path(percentEncoded: false)
-            if !mergedPaths.contains(normalized) {
-              mergedPaths.append(normalized)
-            }
-          }
-          let mergedPathsSnapshot = mergedPaths
-          let mergedRoots = await MainActor.run {
-            uniqueRootPaths(mergedPathsSnapshot)
-          }.map { URL(fileURLWithPath: $0) }
-          let persistedRoots = mergedRoots.map { $0.path(percentEncoded: false) }
-          await MainActor.run {
-            repositoryPersistence.saveRoots(persistedRoots)
-          }
+          let resolvedRootPaths = RepositoryPathNormalizer.normalize(
+            resolvedRoots.map { $0.path(percentEncoded: false) }
+          )
+          let mergedPaths = RepositoryPathNormalizer.normalize(existingRootPaths + resolvedRootPaths)
+          let mergedRoots = mergedPaths.map { URL(fileURLWithPath: $0) }
+          await repositoryPersistence.saveRoots(mergedPaths)
           let (repositories, failures) = await loadRepositoriesData(mergedRoots)
           await send(
             .openRepositoriesFinished(
@@ -200,7 +222,11 @@ struct RepositoriesFeature {
           failures: failures,
           previous: state.repositories
         )
-        applyRepositories(mergedRepositories, state: &state, animated: false)
+        let didPrunePinned = applyRepositories(
+          mergedRepositories,
+          state: &state,
+          animated: false
+        )
         if !invalidRoots.isEmpty {
           let message = invalidRoots.map { "\($0) is not a Git repository." }.joined(separator: "\n")
           state.alert = errorAlert(
@@ -223,6 +249,12 @@ struct RepositoriesFeature {
         ]
         if selectionChanged {
           allEffects.append(.send(.delegate(.selectedWorktreeChanged(selectedWorktree))))
+        }
+        if didPrunePinned {
+          let pinnedWorktreeIDs = state.pinnedWorktreeIDs
+          allEffects.append(.run { _ in
+            await repositoryPersistence.savePinnedWorktreeIDs(pinnedWorktreeIDs)
+          })
         }
         return .merge(allEffects)
 
@@ -508,17 +540,31 @@ struct RepositoriesFeature {
 
       case .repositoryRemoved(let repositoryID, let selectionWasRemoved):
         state.removingRepositoryIDs.remove(repositoryID)
-        let rootPaths = uniqueRootPaths(repositoryPersistence.loadRoots())
-        let remaining = rootPaths.filter { $0 != repositoryID }
-        repositoryPersistence.saveRoots(remaining)
-        let roots = uniqueRootPaths(repositoryPersistence.loadRoots()).map { URL(fileURLWithPath: $0) }
         if selectionWasRemoved {
           state.selectedWorktreeID = nil
           state.shouldSelectFirstAfterReload = true
         }
+        let selectedWorktree = state.worktree(for: state.selectedWorktreeID)
         return .merge(
-          roots.isEmpty ? .none : .send(.reloadRepositories(animated: true)),
-          .send(.delegate(.selectedWorktreeChanged(state.worktree(for: state.selectedWorktreeID))))
+          .send(.delegate(.selectedWorktreeChanged(selectedWorktree))),
+          .run { send in
+            let loadedPaths = await repositoryPersistence.loadRoots()
+            var seen: Set<String> = []
+            let rootPaths = loadedPaths.filter { seen.insert($0).inserted }
+            let remaining = rootPaths.filter { $0 != repositoryID }
+            await repositoryPersistence.saveRoots(remaining)
+            let roots = remaining.map { URL(fileURLWithPath: $0) }
+            let (repositories, failures) = await loadRepositoriesData(roots)
+            await send(
+              .repositoriesLoaded(
+                repositories,
+                failures: failures,
+                roots: roots,
+                animated: true
+              )
+            )
+          }
+          .cancellable(id: CancelID.load, cancelInFlight: true)
         )
 
       case .pinWorktree(let worktreeID):
@@ -526,19 +572,26 @@ struct RepositoriesFeature {
           let wasPinned = state.pinnedWorktreeIDs.contains(worktreeID)
           state.pinnedWorktreeIDs.removeAll { $0 == worktreeID }
           if wasPinned {
-            repositoryPersistence.savePinnedWorktreeIDs(state.pinnedWorktreeIDs)
+            let pinnedWorktreeIDs = state.pinnedWorktreeIDs
+            return .run { _ in
+              await repositoryPersistence.savePinnedWorktreeIDs(pinnedWorktreeIDs)
+            }
           }
           return .none
         }
         state.pinnedWorktreeIDs.removeAll { $0 == worktreeID }
         state.pinnedWorktreeIDs.insert(worktreeID, at: 0)
-        repositoryPersistence.savePinnedWorktreeIDs(state.pinnedWorktreeIDs)
-        return .none
+        let pinnedWorktreeIDs = state.pinnedWorktreeIDs
+        return .run { _ in
+          await repositoryPersistence.savePinnedWorktreeIDs(pinnedWorktreeIDs)
+        }
 
       case .unpinWorktree(let worktreeID):
         state.pinnedWorktreeIDs.removeAll { $0 == worktreeID }
-        repositoryPersistence.savePinnedWorktreeIDs(state.pinnedWorktreeIDs)
-        return .none
+        let pinnedWorktreeIDs = state.pinnedWorktreeIDs
+        return .run { _ in
+          await repositoryPersistence.savePinnedWorktreeIDs(pinnedWorktreeIDs)
+        }
 
       case .presentAlert(let title, let message):
         state.alert = errorAlert(title: title, message: message)
@@ -617,6 +670,9 @@ struct RepositoriesFeature {
         )
         return .none
 
+      case .openRepositorySettings(let repositoryID):
+        return .send(.delegate(.openRepositorySettings(repositoryID)))
+
       case .alert(.dismiss):
         state.alert = nil
         return .none
@@ -668,7 +724,11 @@ struct RepositoriesFeature {
     return (loaded, failures)
   }
 
-  private func applyRepositories(_ repositories: [Repository], state: inout State, animated: Bool) {
+  private func applyRepositories(
+    _ repositories: [Repository],
+    state: inout State,
+    animated: Bool
+  ) -> Bool {
     let previousCounts = Dictionary(
       uniqueKeysWithValues: state.repositories.map { ($0.id, $0.worktrees.count) }
     )
@@ -718,9 +778,7 @@ struct RepositoriesFeature {
       state.pendingTerminalFocusWorktreeIDs = filteredFocusIDs
       state.worktreeInfoByID = filteredWorktreeInfo
     }
-    if prunePinnedWorktreeIDs(state: &state) {
-      repositoryPersistence.savePinnedWorktreeIDs(state.pinnedWorktreeIDs)
-    }
+    let didPrunePinned = prunePinnedWorktreeIDs(state: &state)
     if !isSelectionValid(state.selectedWorktreeID, state: state) {
       state.selectedWorktreeID = nil
     }
@@ -728,6 +786,7 @@ struct RepositoriesFeature {
       state.selectedWorktreeID = firstAvailableWorktreeID(from: repositories, state: state)
       state.shouldSelectFirstAfterReload = false
     }
+    return didPrunePinned
   }
 
   private func mergeRepositories(
@@ -1131,15 +1190,6 @@ private func repositoryForWorktreeCreation(
     return state.repositories.first
   }
   return nil
-}
-
-private func uniqueRootPaths(_ paths: [String]) -> [String] {
-  var seen: Set<String> = []
-  var unique: [String] = []
-  for path in paths where seen.insert(path).inserted {
-    unique.append(path)
-  }
-  return unique
 }
 
 private func prunePinnedWorktreeIDs(state: inout RepositoriesFeature.State) -> Bool {

@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import Sharing
 
 struct RepositorySettingsClient {
   var load: @Sendable (URL) -> RepositorySettings
@@ -8,9 +9,15 @@ struct RepositorySettingsClient {
 
 extension RepositorySettingsClient: DependencyKey {
   static let liveValue = RepositorySettingsClient(
-    load: { RepositorySettingsStorage().load(for: $0) },
-    save: { settings, url in
-      RepositorySettingsStorage().save(settings, for: url)
+    load: { rootURL in
+      @Shared(.repositorySettings(rootURL)) var settings: RepositorySettings
+      return settings
+    },
+    save: { settings, rootURL in
+      @Shared(.repositorySettings(rootURL)) var sharedSettings: RepositorySettings
+      $sharedSettings.withLock {
+        $0 = settings
+      }
     }
   )
   static let testValue = RepositorySettingsClient(

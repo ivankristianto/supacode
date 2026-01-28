@@ -1,18 +1,22 @@
 import ComposableArchitecture
-import Foundation
+import Sharing
 
 struct SettingsClient {
-  var load: @Sendable () -> GlobalSettings
-  var save: @Sendable (GlobalSettings) -> Void
+  var load: @Sendable () async -> GlobalSettings
+  var save: @Sendable (GlobalSettings) async -> Void
 }
 
 extension SettingsClient: DependencyKey {
   static let liveValue = SettingsClient(
-    load: { SettingsStorage().load().global },
+    load: {
+      @Shared(.settingsFile) var settings: SettingsFile
+      return settings.global
+    },
     save: { settings in
-      var fileSettings = SettingsStorage().load()
-      fileSettings.global = settings
-      SettingsStorage().save(fileSettings)
+      @Shared(.settingsFile) var fileSettings: SettingsFile
+      $fileSettings.withLock {
+        $0.global = settings
+      }
     }
   )
   static let testValue = SettingsClient(
