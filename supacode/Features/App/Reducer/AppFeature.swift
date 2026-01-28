@@ -1,6 +1,7 @@
 import AppKit
 import ComposableArchitecture
 import Foundation
+import Sentry
 import SwiftUI
 
 private let notificationSound: NSSound? = {
@@ -389,7 +390,7 @@ struct AppFeature {
       }
     }
     core
-      ._printChanges()
+      .printActionLabels()
     Scope(state: \.repositories, action: \.repositories) {
       RepositoriesFeature()
     }
@@ -402,5 +403,23 @@ struct AppFeature {
     Scope(state: \.updates, action: \.updates) {
       UpdatesFeature()
     }
+  }
+}
+
+private struct ActionLabelReducer<Base: Reducer>: Reducer {
+  let base: Base
+
+  func reduce(into state: inout Base.State, action: Base.Action) -> Effect<Base.Action> {
+    let actionLabel = debugCaseOutput(action)
+    #if !DEBUG
+    SentrySDK.logger.info("received action: \(actionLabel)")
+    #endif
+    return base.reduce(into: &state, action: action)
+  }
+}
+
+private extension Reducer {
+  func printActionLabels() -> ActionLabelReducer<Self> {
+    ActionLabelReducer(base: self)
   }
 }
