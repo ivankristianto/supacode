@@ -199,24 +199,24 @@ struct WorktreeDetailView: View {
       )
     }
     ToolbarItem(placement: .principal) {
-      if let model = PullRequestStatusModel(snapshot: toolbarState.worktreeInfoSnapshot) {
-        PullRequestStatusButton(model: model).padding(.horizontal)
-      } else {
-          XcodeStyleStatusView().padding(.horizontal)
-      }
-    }
-    
-      ToolbarItem(placement: .status) {
-      RunScriptToolbarButton(
-        isRunning: toolbarState.runScriptIsRunning,
-        isEnabled: toolbarState.runScriptEnabled,
-        runHelpText: toolbarState.runScriptHelpText,
-        stopHelpText: toolbarState.stopRunScriptHelpText,
-        runShortcut: AppShortcuts.runScript.display,
-        stopShortcut: AppShortcuts.stopRunScript.display,
-        runAction: { store.send(.runScript) },
-        stopAction: { store.send(.stopRunScript) }
-      )
+        HStack {
+            if let model = PullRequestStatusModel(snapshot: toolbarState.worktreeInfoSnapshot) {
+                PullRequestStatusButton(model: model).padding(.horizontal)
+            } else {
+                XcodeStyleStatusView().padding(.horizontal)
+            }
+            Divider()
+            RunScriptToolbarButton(
+              isRunning: toolbarState.runScriptIsRunning,
+              isEnabled: toolbarState.runScriptEnabled,
+              runHelpText: toolbarState.runScriptHelpText,
+              stopHelpText: toolbarState.stopRunScriptHelpText,
+              runShortcut: AppShortcuts.runScript.display,
+              stopShortcut: AppShortcuts.stopRunScript.display,
+              runAction: { store.send(.runScript) },
+              stopAction: { store.send(.stopRunScript) }
+            )
+        }
     }
       
     ToolbarItem(placement: .automatic) {
