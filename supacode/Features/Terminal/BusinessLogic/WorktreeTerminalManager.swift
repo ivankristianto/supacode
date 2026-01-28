@@ -1,4 +1,5 @@
 import Observation
+import Sharing
 
 @MainActor
 @Observable
@@ -96,7 +97,8 @@ final class WorktreeTerminalManager {
     let state = state(for: worktree)
     let setupScript: String?
     if state.needsSetupScript() {
-      let settings = RepositorySettingsStorage().load(for: worktree.repositoryRootURL)
+      @SharedReader(.repositorySettings(worktree.repositoryRootURL))
+      var settings = RepositorySettings.default
       setupScript = settings.setupScript
     } else {
       setupScript = nil

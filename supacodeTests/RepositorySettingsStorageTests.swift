@@ -1,24 +1,25 @@
 import Dependencies
 import DependenciesTestSupport
 import Foundation
+import Sharing
 import Testing
 
 @testable import supacode
 
-struct RepositorySettingsStorageTests {
+struct RepositorySettingsKeyTests {
   @Test(.dependencies) func loadCreatesDefaultAndPersists() throws {
     let storage = SettingsTestStorage()
     let suiteName = "supacode.tests.\(UUID().uuidString)"
     let userDefaults = UserDefaults(suiteName: suiteName) ?? .standard
     defer { userDefaults.removePersistentDomain(forName: suiteName) }
-    let repositoryStorage = RepositorySettingsStorage()
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
 
     let settings = withDependencies {
       $0.settingsFileStorage = storage.storage
       $0.settingsUserDefaults = SettingsUserDefaults(userDefaults: userDefaults)
     } operation: {
-      repositoryStorage.load(for: rootURL)
+      @Shared(.repositorySettings(rootURL)) var repositorySettings: RepositorySettings
+      return repositorySettings
     }
 
     #expect(settings == RepositorySettings.default)
@@ -35,7 +36,6 @@ struct RepositorySettingsStorageTests {
     let suiteName = "supacode.tests.\(UUID().uuidString)"
     let userDefaults = UserDefaults(suiteName: suiteName) ?? .standard
     defer { userDefaults.removePersistentDomain(forName: suiteName) }
-    let repositoryStorage = RepositorySettingsStorage()
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
 
     var settings = RepositorySettings.default
@@ -44,7 +44,10 @@ struct RepositorySettingsStorageTests {
       $0.settingsFileStorage = storage.storage
       $0.settingsUserDefaults = SettingsUserDefaults(userDefaults: userDefaults)
     } operation: {
-      repositoryStorage.save(settings, for: rootURL)
+      @Shared(.repositorySettings(rootURL)) var repositorySettings: RepositorySettings
+      $repositorySettings.withLock {
+        $0 = settings
+      }
     }
 
     let data = try requireData(storage.data(for: SupacodePaths.settingsURL))

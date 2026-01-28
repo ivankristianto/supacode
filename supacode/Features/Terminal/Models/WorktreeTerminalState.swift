@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import GhosttyKit
 import Observation
+import Sharing
 
 @MainActor
 @Observable
@@ -9,6 +10,8 @@ final class WorktreeTerminalState {
   let tabManager: TerminalTabManager
   private let runtime: GhosttyRuntime
   private let worktree: Worktree
+  @ObservationIgnored
+  @SharedReader private var repositorySettings: RepositorySettings
   private var trees: [TerminalTabID: SplitTree<GhosttySurfaceView>] = [:]
   private var surfaces: [UUID: GhosttySurfaceView] = [:]
   private var focusedSurfaceIdByTab: [TerminalTabID: UUID] = [:]
@@ -33,6 +36,10 @@ final class WorktreeTerminalState {
     self.worktree = worktree
     self.pendingSetupScript = runSetupScript
     self.tabManager = TerminalTabManager()
+    _repositorySettings = SharedReader(
+      wrappedValue: RepositorySettings.default,
+      .repositorySettings(worktree.repositoryRootURL)
+    )
   }
 
   var focusedTaskStatus: WorktreeTaskStatus {
@@ -52,8 +59,7 @@ final class WorktreeTerminalState {
       Task {
         let setupScript: String?
         if pendingSetupScript {
-          let settings = RepositorySettingsStorage().load(for: worktree.repositoryRootURL)
-          setupScript = settings.setupScript
+          setupScript = repositorySettings.setupScript
         } else {
           setupScript = nil
         }
