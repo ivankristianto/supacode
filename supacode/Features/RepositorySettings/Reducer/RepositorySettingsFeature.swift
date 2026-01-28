@@ -19,6 +19,11 @@ struct RepositorySettingsFeature {
     case settingsLoaded(RepositorySettings)
     case setSetupScript(String)
     case setRunScript(String)
+    case delegate(Delegate)
+  }
+
+  enum Delegate: Equatable {
+    case settingsChanged(URL)
   }
 
   @Dependency(\.repositorySettingsClient) private var repositorySettingsClient
@@ -43,14 +48,9 @@ struct RepositorySettingsFeature {
         let settings = state.settings
         let rootURL = state.rootURL
         let repositorySettingsClient = repositorySettingsClient
-        return .run { _ in
+        return .run { send in
           repositorySettingsClient.save(settings, rootURL)
-          await MainActor.run {
-            NotificationCenter.default.post(
-              name: .repositorySettingsChanged,
-              object: rootURL
-            )
-          }
+          await send(.delegate(.settingsChanged(rootURL)))
         }
 
       case .setRunScript(let script):
@@ -58,15 +58,13 @@ struct RepositorySettingsFeature {
         let settings = state.settings
         let rootURL = state.rootURL
         let repositorySettingsClient = repositorySettingsClient
-        return .run { _ in
+        return .run { send in
           repositorySettingsClient.save(settings, rootURL)
-          await MainActor.run {
-            NotificationCenter.default.post(
-              name: .repositorySettingsChanged,
-              object: rootURL
-            )
-          }
+          await send(.delegate(.settingsChanged(rootURL)))
         }
+
+      case .delegate:
+        return .none
       }
     }
   }

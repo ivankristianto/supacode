@@ -20,8 +20,10 @@ struct AppFeature {
     var settings: SettingsFeature.State
     var updates = UpdatesFeature.State()
     var openActionSelection: OpenWorktreeAction = .finder
+    var settingsSelection: SettingsSection? = .general
     var selectedRunScript: String = ""
     var runScriptStatusByWorktreeID: [Worktree.ID: Bool] = [:]
+    var repositorySettings: RepositorySettingsFeature.State?
     @Presents var alert: AlertState<Alert>?
 
     init(
@@ -41,6 +43,7 @@ struct AppFeature {
     case settings(SettingsFeature.Action)
     case updates(UpdatesFeature.Action)
     case openActionSelectionChanged(OpenWorktreeAction)
+    case settingsSelectionChanged(SettingsSection?)
     case worktreeSettingsLoaded(RepositorySettings, worktreeID: Worktree.ID)
     case openSelectedWorktree
     case openWorktree(OpenWorktreeAction)
@@ -55,7 +58,7 @@ struct AppFeature {
     case navigateSearchNext
     case navigateSearchPrevious
     case endSearch
-    case repositorySettingsChanged(URL)
+    case repositorySettings(RepositorySettingsFeature.Action)
     case alert(PresentationAction<Alert>)
     case terminalEvent(TerminalClient.Event)
   }
@@ -86,16 +89,24 @@ struct AppFeature {
             for await event in await worktreeInfoWatcher.events() {
               await send(.repositories(.worktreeInfoEvent(event)))
             }
-          },
-          .run { send in
-            for await notification in NotificationCenter.default
-              .notifications(named: .repositorySettingsChanged)
-            {
-              guard let rootURL = notification.object as? URL else { continue }
-              await send(.repositorySettingsChanged(rootURL))
-            }
           }
         )
+
+      case .settingsSelectionChanged(let selection):
+        state.settingsSelection = selection
+        switch selection {
+        case .repository(let repositoryID):
+          guard let repository = state.repositories.repositories.first(where: { $0.id == repositoryID }) else {
+            state.settingsSelection = .general
+            state.repositorySettings = nil
+            return .none
+          }
+          state.repositorySettings = RepositorySettingsFeature.State(rootURL: repository.rootURL)
+          return .none
+        case .general, .notifications, .updates, .github, .none:
+          state.repositorySettings = nil
+          return .none
+        }
 
       case .scenePhaseChanged(let phase):
         switch phase {
@@ -145,6 +156,12 @@ struct AppFeature {
         let ids = Set(repositories.flatMap { $0.worktrees.map(\.id) })
         let worktrees = repositories.flatMap(\.worktrees)
         state.runScriptStatusByWorktreeID = state.runScriptStatusByWorktreeID.filter { ids.contains($0.key) }
+        if case .repository(let repositoryID) = state.settingsSelection,
+           !repositories.contains(where: { $0.id == repositoryID })
+        {
+          state.settingsSelection = .general
+          state.repositorySettings = nil
+        }
         return .merge(
           .run { _ in
             await terminalClient.send(.prune(ids))
@@ -296,7 +313,7 @@ struct AppFeature {
           await terminalClient.send(.endSearch(worktree))
         }
 
-      case .repositorySettingsChanged(let rootURL):
+      case .repositorySettings(.delegate(.settingsChanged(let rootURL))):
         guard let selectedWorktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
               selectedWorktree.repositoryRootURL == rootURL
         else {
@@ -352,9 +369,16 @@ struct AppFeature {
 
       case .terminalEvent:
         return .none
+
+      case .repositorySettings:
+        return .none
       }
     }
-    core.printActionLabels()
+    core
+      .printActionLabels()
+      .ifLet(\.repositorySettings, action: \.repositorySettings) {
+        RepositorySettingsFeature()
+      }
     Scope(state: \.repositories, action: \.repositories) {
       RepositoriesFeature()
     }
