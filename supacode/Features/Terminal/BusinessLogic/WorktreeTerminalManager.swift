@@ -16,7 +16,7 @@ final class WorktreeTerminalManager {
   func handleCommand(_ command: TerminalClient.Command) {
     switch command {
     case .createTab(let worktree):
-      Task { await createTabAsync(in: worktree) }
+      Task { createTabAsync(in: worktree) }
     case .runScript(let worktree, let script):
       _ = state(for: worktree).runScript(script)
     case .stopRunScript(let worktree):
@@ -92,7 +92,7 @@ final class WorktreeTerminalManager {
     return state
   }
 
-  private func createTabAsync(in worktree: Worktree) async {
+  private func createTabAsync(in worktree: Worktree) {
     let state = state(for: worktree)
     let setupScript: String?
     if state.needsSetupScript() {

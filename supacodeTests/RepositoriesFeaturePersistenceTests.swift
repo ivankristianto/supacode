@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import DependenciesTestSupport
 import Foundation
 import Testing
 
@@ -6,7 +7,7 @@ import Testing
 
 @MainActor
 struct RepositoriesFeaturePersistenceTests {
-  @Test func taskLoadsPinnedWorktreesBeforeRepositories() async {
+  @Test(.dependencies) func taskLoadsPinnedWorktreesBeforeRepositories() async {
     let pinned = ["/tmp/repo/wt-1"]
     let store = TestStore(initialState: RepositoriesFeature.State()) {
       RepositoriesFeature()
@@ -21,5 +22,6 @@ struct RepositoriesFeaturePersistenceTests {
     }
     await store.receive(.loadPersistedRepositories)
     await store.receive(.repositoriesLoaded([], failures: [], roots: [], animated: false))
+    await store.finish()
   }
 }

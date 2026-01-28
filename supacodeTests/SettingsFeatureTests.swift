@@ -1,11 +1,12 @@
 import ComposableArchitecture
+import DependenciesTestSupport
 import Testing
 
 @testable import supacode
 
 @MainActor
 struct SettingsFeatureTests {
-  @Test func loadSettings() async {
+  @Test(.dependencies) func loadSettings() async {
     let loaded = GlobalSettings(
       appearanceMode: .dark,
       updatesAutomaticallyCheckForUpdates: false,
@@ -30,7 +31,7 @@ struct SettingsFeatureTests {
     await store.receive(.delegate(.settingsChanged(loaded)))
   }
 
-  @Test func savesUpdatesChanges() async {
+  @Test(.dependencies) func savesUpdatesChanges() async {
     let saved = LockIsolated<GlobalSettings?>(nil)
     let store = TestStore(initialState: SettingsFeature.State()) {
       SettingsFeature()
@@ -52,6 +53,7 @@ struct SettingsFeatureTests {
     )
     await store.receive(.delegate(.settingsChanged(expectedSettings)))
 
+    await store.finish()
     #expect(saved.value == expectedSettings)
   }
 }
