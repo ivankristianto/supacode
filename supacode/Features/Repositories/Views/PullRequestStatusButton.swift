@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PullRequestStatusButton: View {
   let model: PullRequestStatusModel
+  @Environment(CommandKeyObserver.self) private var commandKeyObserver
 
   var body: some View {
     PullRequestChecksPopoverButton(
@@ -16,7 +17,9 @@ struct PullRequestStatusButton: View {
           color: model.badgeColor
         )
         if let detailText = model.detailText {
-          Text(detailText)
+          Text(commandKeyObserver.isPressed ? "Open on GitHub \(AppShortcuts.openPullRequest.display)" : detailText)
+        } else if commandKeyObserver.isPressed {
+          Text("Open on GitHub \(AppShortcuts.openPullRequest.display)")
         }
       }
     }

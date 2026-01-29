@@ -39,7 +39,8 @@ struct PullRequestChecksPopoverView: View {
           openURL(pullRequestURL)
         }
         .buttonStyle(.plain)
-        .help("Open pull request on GitHub")
+        .help("Open pull request on GitHub (\(AppShortcuts.openPullRequest.display))")
+        .keyboardShortcut(AppShortcuts.openPullRequest.keyboardShortcut)
         .font(.caption)
       }
 
