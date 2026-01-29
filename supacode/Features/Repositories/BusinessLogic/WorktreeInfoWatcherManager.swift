@@ -35,8 +35,6 @@ final class WorktreeInfoWatcherManager {
       setWorktrees(worktrees)
     case .setSelectedWorktreeID(let worktreeID):
       setSelectedWorktreeID(worktreeID)
-    case .refreshPullRequests:
-      refreshPullRequests()
     case .stop:
       stopAll()
     }
@@ -266,13 +264,6 @@ final class WorktreeInfoWatcherManager {
       }
     }
     pullRequestTasks[repositoryRootURL] = RefreshTask(interval: interval, task: task)
-  }
-
-  private func refreshPullRequests() {
-    let repositoryRoots = Set(worktrees.values.map(\.repositoryRootURL))
-    for repositoryRootURL in repositoryRoots {
-      updatePullRequestSchedule(repositoryRootURL: repositoryRootURL, immediate: true)
-    }
   }
 
   private func repositoryWorktreeIDs(for repositoryRootURL: URL) -> [Worktree.ID] {

@@ -34,7 +34,6 @@ struct AppFeature {
 
   enum Action: Equatable {
     case task
-    case viewAppeared
     case scenePhaseChanged(ScenePhase)
     case repositories(RepositoriesFeature.Action)
     case settings(SettingsFeature.Action)
@@ -85,11 +84,6 @@ struct AppFeature {
             }
           }
         )
-
-      case .viewAppeared:
-        return .run { _ in
-          await worktreeInfoWatcher.send(.refreshPullRequests)
-        }
 
       case .scenePhaseChanged(let phase):
         switch phase {
