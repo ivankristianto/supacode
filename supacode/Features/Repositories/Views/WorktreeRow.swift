@@ -33,9 +33,18 @@ struct WorktreeRow: View {
       state: pullRequestState,
       number: pullRequestNumber
     )
-    let pullRequestCheckBreakdown = displayPullRequest?.statusCheckRollup.map {
-      PullRequestCheckBreakdown(checks: $0.checks)
-    }
+    let pullRequestCheckBreakdown: PullRequestCheckBreakdown? = {
+      guard let rollup = displayPullRequest?.statusCheckRollup else {
+        return nil
+      }
+      guard !rollup.checks.isEmpty else {
+        return nil
+      }
+      guard pullRequestState != "MERGED" else {
+        return nil
+      }
+      return PullRequestCheckBreakdown(checks: rollup.checks)
+    }()
     let pullRequestHelp = PullRequestBadgeStyle.helpText(state: pullRequestState, url: pullRequestURL)
     HStack(alignment: .center) {
       ZStack {
