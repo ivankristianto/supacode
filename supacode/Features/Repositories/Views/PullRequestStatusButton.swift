@@ -12,12 +12,17 @@ struct PullRequestStatusButton: View {
     } label: {
       HStack(spacing: 6) {
         if let checkBreakdown = model.checkBreakdown {
+          PullRequestBadgeView(
+            text: model.badgeText,
+            color: model.badgeColor
+          )
           PullRequestChecksRingView(breakdown: checkBreakdown)
+        } else {
+          PullRequestBadgeView(
+            text: model.badgeText,
+            color: model.badgeColor
+          )
         }
-        PullRequestBadgeView(
-          text: model.badgeText,
-          color: model.badgeColor
-        )
         if let detailText = model.detailText {
           Text(detailText)
         }
