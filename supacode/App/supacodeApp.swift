@@ -66,6 +66,15 @@ struct SupacodeApp: App {
       initialState: AppFeature.State(settings: SettingsFeature.State(settings: initialSettings))
     ) {
         AppFeature()
+          .logActions { action in
+            #if DEBUG
+            print("Action: \(action)")
+            #else
+            let breadcrumb = Breadcrumb(level: .debug, category: "action")
+            breadcrumb.message = action
+            SentrySDK.addBreadcrumb(breadcrumb)
+            #endif
+          }
       } withDependencies: { values in
         values.terminalClient = TerminalClient(
           send: { command in

@@ -1,4 +1,22 @@
 import Foundation
+import ComposableArchitecture
+
+extension Reducer {
+  @ReducerBuilder<State, Action>
+  func logActions(_ log: @escaping (String) -> Void) -> some Reducer<State, Action> {
+    LogActionsReducer(base: self, log: log)
+  }
+}
+
+struct LogActionsReducer<Base: Reducer>: Reducer {
+  let base: Base
+  let log: (String) -> Void
+
+  func reduce(into state: inout Base.State, action: Base.Action) -> Effect<Base.Action> {
+    log(debugCaseOutput(action))
+    return base.reduce(into: &state, action: action)
+  }
+}
 
 func debugCaseOutput(
   _ value: Any,
