@@ -28,7 +28,13 @@ struct TerminalTabView: View {
         )
       }
       .buttonStyle(TerminalTabButtonStyle(isPressing: $isPressing))
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .frame(
+        minWidth: TerminalTabBarMetrics.tabMinWidth,
+        maxWidth: TerminalTabBarMetrics.tabMaxWidth,
+        minHeight: TerminalTabBarMetrics.tabHeight,
+        maxHeight: TerminalTabBarMetrics.tabHeight
+      )
+      .frame(width: fixedWidth)
       .contentShape(.rect)
       .help("Open tab \(tab.title)")
       .accessibilityLabel(tab.title)
@@ -52,13 +58,6 @@ struct TerminalTabView: View {
       )
       .animation(.easeInOut(duration: TerminalTabBarMetrics.hoverAnimationDuration), value: isHovering)
     }
-    .frame(
-      minWidth: TerminalTabBarMetrics.tabMinWidth,
-      maxWidth: TerminalTabBarMetrics.tabMaxWidth,
-      minHeight: TerminalTabBarMetrics.tabHeight,
-      maxHeight: TerminalTabBarMetrics.tabHeight
-    )
-    .frame(width: fixedWidth)
     .padding(.bottom, isActive ? TerminalTabBarMetrics.activeTabBottomPadding : 0)
     .offset(y: isActive ? TerminalTabBarMetrics.activeTabOffset : 0)
     .clipShape(.rect(cornerRadius: TerminalTabBarMetrics.tabCornerRadius))
