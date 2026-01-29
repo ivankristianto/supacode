@@ -2,30 +2,23 @@ import SwiftUI
 
 struct PullRequestStatusButton: View {
   let model: PullRequestStatusModel
-  @Environment(\.openURL) private var openURL
 
   var body: some View {
-    HStack(spacing: 6) {
-      if !model.statusChecks.isEmpty {
-        PullRequestChecksPopoverButton(checks: model.statusChecks)
-      }
-      Button {
-        if let url = model.url {
-          openURL(url)
-        }
-      } label: {
-        HStack(spacing: 6) {
-          PullRequestBadgeView(
-            text: model.badgeText,
-            color: model.badgeColor
-          )
-          if let detailText = model.detailText {
-            Text(detailText)
-          }
+    PullRequestChecksPopoverButton(
+      checks: model.statusChecks,
+      pullRequestURL: model.url
+    ) {
+      let breakdown = PullRequestCheckBreakdown(checks: model.statusChecks)
+      HStack(spacing: 6) {
+        PullRequestChecksRingView(breakdown: breakdown)
+        PullRequestBadgeView(
+          text: model.badgeText,
+          color: model.badgeColor
+        )
+        if let detailText = model.detailText {
+          Text(detailText)
         }
       }
-      .buttonStyle(.plain)
-      .help(model.helpText)
     }
     .font(.caption)
     .monospaced()
@@ -76,10 +69,6 @@ struct PullRequestStatusModel: Equatable {
 
   var badgeColor: Color {
     PullRequestBadgeStyle.style(state: state, number: number)?.color ?? .secondary
-  }
-
-  var helpText: String {
-    "Open pull request on GitHub"
   }
 
   static func shouldDisplay(state: String?, number: Int?) -> Bool {

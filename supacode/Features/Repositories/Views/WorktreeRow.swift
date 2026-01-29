@@ -10,7 +10,6 @@ struct WorktreeRow: View {
   let isRunScriptRunning: Bool
   let showsNotificationIndicator: Bool
   let shortcutHint: String?
-  @Environment(\.openURL) private var openURL
 
   var body: some View {
     let showsSpinner = isLoading || taskStatus == .running
@@ -34,7 +33,7 @@ struct WorktreeRow: View {
       state: pullRequestState,
       number: pullRequestNumber
     )
-    let pullRequestHelp = PullRequestBadgeStyle.helpText(state: pullRequestState, url: pullRequestURL)
+    let pullRequestHelp = "Show pull request checks"
     HStack(alignment: .center) {
       ZStack {
         if showsNotificationIndicator {
@@ -78,15 +77,13 @@ struct WorktreeRow: View {
           .help("Run script active")
           .accessibilityLabel("Run script active")
       }
-      if !pullRequestChecks.isEmpty {
-        PullRequestChecksPopoverButton(checks: pullRequestChecks)
-      }
       if let pullRequestBadgeStyle {
         pullRequestBadge(
           text: pullRequestBadgeStyle.text,
           color: pullRequestBadgeStyle.color,
           help: pullRequestHelp,
-          url: pullRequestURL
+          url: pullRequestURL,
+          checks: pullRequestChecks
         )
       }
       if let shortcutHint {
@@ -100,20 +97,20 @@ struct WorktreeRow: View {
     text: String,
     color: Color,
     help: String,
-    url: URL?
+    url: URL?,
+    checks: [GithubPullRequestStatusCheck]
   ) -> some View {
-    if let url {
-      Button {
-        openURL(url)
-      } label: {
+    PullRequestChecksPopoverButton(
+      checks: checks,
+      pullRequestURL: url
+    ) {
+      let breakdown = PullRequestCheckBreakdown(checks: checks)
+      HStack(spacing: 6) {
+        PullRequestChecksRingView(breakdown: breakdown)
         PullRequestBadgeView(text: text, color: color)
       }
-      .buttonStyle(.plain)
-      .help(help)
-    } else {
-      PullRequestBadgeView(text: text, color: color)
-        .help(help)
     }
+    .help(help)
   }
 }
 
