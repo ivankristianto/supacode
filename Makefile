@@ -15,9 +15,10 @@ GHOSTTY_TERMINFO_PATH := $(CURRENT_MAKEFILE_DIR)/Resources/terminfo
 GHOSTTY_BUILD_OUTPUTS := $(GHOSTTY_XCFRAMEWORK_PATH) $(GHOSTTY_RESOURCE_PATH) $(GHOSTTY_TERMINFO_PATH)
 VERSION ?=
 BUILD ?=
+FILES ?=
 
 .DEFAULT_GOAL := help
-.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources lint test update-wt bump-version bump-and-release
+.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources lint test update-wt bump-version bump-and-release install-git-hooks
 
 help:  # Display this help.
 	@-+echo "Run make with one of the following targets:"
@@ -64,14 +65,32 @@ install-dev-build: build-app # install dev build to /Applications
 	echo "installed $$dst"
 
 lint: # Run swiftlint
-	mise exec -- swiftlint --quiet
+	if [ -n "$(FILES)" ]; then \
+		for file in $(FILES); do \
+			mise exec -- swiftlint --quiet --path "$$file"; \
+		done; \
+	else \
+		mise exec -- swiftlint --quiet; \
+	fi
 
 test: build-ghostty-xcframework
 	xcodebuild test -project supacode.xcodeproj -scheme supacode -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation 2>&1
 
 format: # Swift format
-	swift-format -p --in-place --recursive --configuration ./.swift-format.json supacode supacodeTests
-	mise exec -- swiftlint --fix --quiet
+	if [ -n "$(FILES)" ]; then \
+		swift-format -p --in-place --configuration ./.swift-format.json $(FILES); \
+		for file in $(FILES); do \
+			mise exec -- swiftlint --fix --quiet --path "$$file"; \
+		done; \
+	else \
+		swift-format -p --in-place --recursive --configuration ./.swift-format.json supacode supacodeTests; \
+		mise exec -- swiftlint --fix --quiet; \
+	fi
+
+install-git-hooks:
+	@mkdir -p "$(CURRENT_MAKEFILE_DIR)/.githooks"
+	@git config core.hooksPath "$(CURRENT_MAKEFILE_DIR)/.githooks"
+	@chmod +x "$(CURRENT_MAKEFILE_DIR)/.githooks/pre-commit"
 
 update-wt: # Download git-wt binary to Resources
 	@mkdir -p "$(CURRENT_MAKEFILE_DIR)/Resources/git-wt"
