@@ -6,6 +6,7 @@ enum GitOperation: String {
   case worktreeList = "worktree_list"
   case worktreeCreate = "worktree_create"
   case worktreeRemove = "worktree_remove"
+  case repoIsBare = "repo_is_bare"
   case branchNames = "branch_names"
   case branchRename = "branch_rename"
   case branchDelete = "branch_delete"
@@ -64,7 +65,9 @@ struct GitClient {
       return []
     }
     let data = Data(trimmed.utf8)
-    let entries = try JSONDecoder().decode([GitWtWorktreeEntry].self, from: data)
+    let entries = GitWtWorktreeEntry.filteringBare(
+      try JSONDecoder().decode([GitWtWorktreeEntry].self, from: data)
+    )
     let worktreeEntries = entries.enumerated().map { index, entry in
       let worktreeURL = URL(fileURLWithPath: entry.path).standardizedFileURL
       let name = entry.branch.isEmpty ? worktreeURL.lastPathComponent : entry.branch
@@ -116,6 +119,15 @@ struct GitClient {
       .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
       .filter { !$0.isEmpty }
     return Set(names)
+  }
+
+  nonisolated func isBareRepository(for repoRoot: URL) async throws -> Bool {
+    let path = repoRoot.path(percentEncoded: false)
+    let output = try await runGit(
+      operation: .repoIsBare,
+      arguments: ["-C", path, "rev-parse", "--is-bare-repository"]
+    )
+    return output.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
   }
 
   nonisolated func createWorktree(
@@ -444,8 +456,20 @@ nonisolated private func wrapShellError(
   return gitError
 }
 
-struct GitWtWorktreeEntry: Decodable {
+struct GitWtWorktreeEntry: Decodable, Equatable {
   let branch: String
   let path: String
   let head: String
+  let isBare: Bool
+
+  enum CodingKeys: String, CodingKey {
+    case branch
+    case path
+    case head
+    case isBare = "is_bare"
+  }
+
+  static func filteringBare(_ entries: [GitWtWorktreeEntry]) -> [GitWtWorktreeEntry] {
+    entries.filter { !$0.isBare }
+  }
 }

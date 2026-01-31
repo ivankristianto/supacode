@@ -366,11 +366,14 @@ struct RepositoriesFeature {
               )
               return
             }
+            let isBareRepository = (try? await gitClient.isBareRepository(repository.rootURL)) ?? false
+            let copyIgnored = isBareRepository ? false : repositorySettings.copyIgnoredOnWorktreeCreate
+            let copyUntracked = isBareRepository ? false : repositorySettings.copyUntrackedOnWorktreeCreate
             let newWorktree = try await gitClient.createWorktree(
               name,
               repository.rootURL,
-              repositorySettings.copyIgnoredOnWorktreeCreate,
-              repositorySettings.copyUntrackedOnWorktreeCreate
+              copyIgnored,
+              copyUntracked
             )
             await send(
               .createRandomWorktreeSucceeded(

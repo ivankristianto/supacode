@@ -21,6 +21,10 @@ struct RepositorySettingsView: View {
             set: { store.send(.setCopyUntrackedOnWorktreeCreate($0)) }
           )
         )
+        if store.isBareRepository {
+          Text("Copy flags are ignored for bare repositories.")
+            .foregroundStyle(.secondary)
+        }
       } header: {
         VStack(alignment: .leading, spacing: 4) {
           Text("Worktree")

@@ -7,11 +7,12 @@ struct RepositorySettingsFeature {
   struct State: Equatable {
     var rootURL: URL
     var settings: RepositorySettings
+    var isBareRepository = false
   }
 
   enum Action: Equatable {
     case task
-    case settingsLoaded(RepositorySettings)
+    case settingsLoaded(RepositorySettings, isBareRepository: Bool)
     case setSetupScript(String)
     case setRunScript(String)
     case setCopyIgnoredOnWorktreeCreate(Bool)
@@ -24,6 +25,7 @@ struct RepositorySettingsFeature {
   }
 
   @Dependency(\.repositorySettingsClient) private var repositorySettingsClient
+  @Dependency(\.gitClient) private var gitClient
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -31,13 +33,16 @@ struct RepositorySettingsFeature {
       case .task:
         let rootURL = state.rootURL
         let repositorySettingsClient = repositorySettingsClient
+        let gitClient = gitClient
         return .run { send in
           let settings = repositorySettingsClient.load(rootURL)
-          await send(.settingsLoaded(settings))
+          let isBareRepository = (try? await gitClient.isBareRepository(rootURL)) ?? false
+          await send(.settingsLoaded(settings, isBareRepository: isBareRepository))
         }
 
-      case .settingsLoaded(let settings):
+      case .settingsLoaded(let settings, let isBareRepository):
         state.settings = settings
+        state.isBareRepository = isBareRepository
         return .none
 
       case .setSetupScript(let script):
