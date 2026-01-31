@@ -233,6 +233,7 @@ final class GhosttySurfaceView: NSView, Identifiable {
     case 0x37, 0x36: mod = GHOSTTY_MODS_SUPER.rawValue
     default: return
     }
+    if hasMarkedText() { return }
     let mods = ghosttyMods(event.modifierFlags)
     var action = GHOSTTY_ACTION_RELEASE
     if (mods.rawValue & mod) != 0 {
@@ -771,11 +772,9 @@ final class GhosttySurfaceView: NSView, Identifiable {
       composing: composing
     )
     let finalText = text ?? ghosttyCharacters(resolvedEvent)
-    if let finalText, !finalText.isEmpty {
-      if text == nil, let codepoint = finalText.utf8.first, codepoint < 0x20 {
-        key.text = nil
-        return ghostty_surface_key(surface, key)
-      }
+    if let finalText, !finalText.isEmpty,
+      let codepoint = finalText.utf8.first, codepoint >= 0x20
+    {
       return finalText.withCString { ptr in
         key.text = ptr
         return ghostty_surface_key(surface, key)
