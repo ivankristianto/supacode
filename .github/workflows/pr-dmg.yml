@@ -190,12 +190,23 @@ jobs:
         with:
           script: |
             const marker = 'Supacode PR DMG'
-            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
-            const body = `${marker}\n\nSigned DMG is ready. Download it from the workflow run artifacts:\n${runUrl}`
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner,
+              repo,
+              run_id: context.runId
+            })
+            const artifact = artifacts.data.artifacts.find(item => item.name === 'supacode-pr-dmg')
+            const artifactUrl = artifact
+              ? `https://github.com/${owner}/${repo}/actions/runs/${context.runId}/artifacts/${artifact.id}`
+              : runUrl
+            const body = `${marker}\n\nSigned DMG is ready. Download:\n${artifactUrl}\n\nRun details:\n${runUrl}`
 
             const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               issue_number: context.issue.number,
               per_page: 100
             })
@@ -204,15 +215,15 @@ jobs:
 
             if (existing) {
               await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 comment_id: existing.id,
                 body
               })
             } else {
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 issue_number: context.issue.number,
                 body
               })
