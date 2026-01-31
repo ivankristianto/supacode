@@ -16,6 +16,15 @@ struct AppLoadingView: View {
     "Assembling task graph",
     "Tuning buffers",
     "Hydrating caches",
+    "Removing \"you're absolutely right!\"",
+    "Evicting polite overcommit",
+    "Reducing agent flattery",
+    "Sharpening code opinions",
+    "Making the bots decisive",
+    "Debouncing Claude Code pleasantries",
+    "Calibrating Codex confidence",
+    "Pruning Claude Code hedges",
+    "Clearing Codex verbosity",
   ]
 
   var body: some View {
