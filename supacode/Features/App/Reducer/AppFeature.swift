@@ -43,6 +43,7 @@ struct AppFeature {
     case openSelectedWorktree
     case openWorktree(OpenWorktreeAction)
     case openWorktreeFailed(OpenActionError)
+    case requestQuit
     case newTerminal
     case runScript
     case stopRunScript
@@ -59,6 +60,7 @@ struct AppFeature {
 
   enum Alert: Equatable {
     case dismiss
+    case confirmQuit
   }
 
   @Dependency(\.repositorySettingsClient) private var repositorySettingsClient
@@ -237,6 +239,26 @@ struct AppFeature {
         }
         return .none
 
+      case .requestQuit:
+        guard state.settings.confirmBeforeQuit else {
+          return .run { @MainActor _ in
+            NSApplication.shared.terminate(nil)
+          }
+        }
+        state.alert = AlertState {
+          TextState("Quit Supacode?")
+        } actions: {
+          ButtonState(role: .cancel, action: .dismiss) {
+            TextState("Cancel")
+          }
+          ButtonState(role: .destructive, action: .confirmQuit) {
+            TextState("Quit")
+          }
+        } message: {
+          TextState("This will close all terminal sessions.")
+        }
+        return .none
+
       case .newTerminal:
         guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
           return .none
@@ -353,6 +375,12 @@ struct AppFeature {
       case .alert(.dismiss):
         state.alert = nil
         return .none
+
+      case .alert(.presented(.confirmQuit)):
+        state.alert = nil
+        return .run { @MainActor _ in
+          NSApplication.shared.terminate(nil)
+        }
 
       case .alert:
         return .none

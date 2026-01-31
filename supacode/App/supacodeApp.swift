@@ -119,6 +119,13 @@ struct SupacodeApp: App {
           modifiers: AppShortcuts.openSettings.modifiers
         )
       }
+      CommandGroup(replacing: .appTermination) {
+        Button("Quit Supacode") {
+          store.send(.requestQuit)
+        }
+        .keyboardShortcut("q")
+        .help("Quit Supacode (⌘Q)")
+      }
     }
   }
 }

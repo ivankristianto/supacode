@@ -19,6 +19,16 @@ struct AppearanceSettingsView: View {
             }
           }
         }
+        Section("Quit") {
+          Toggle(
+            "Confirm before quitting",
+            isOn: Binding(
+              get: { store.confirmBeforeQuit },
+              set: { store.send(.setConfirmBeforeQuit($0)) }
+            )
+          )
+          .help("Ask before quitting Supacode")
+        }
       }
       .formStyle(.grouped)
     }

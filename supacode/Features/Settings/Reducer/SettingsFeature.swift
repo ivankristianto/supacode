@@ -6,6 +6,7 @@ struct SettingsFeature {
   @ObservableState
   struct State: Equatable {
     var appearanceMode: AppearanceMode
+    var confirmBeforeQuit: Bool
     var updatesAutomaticallyCheckForUpdates: Bool
     var updatesAutomaticallyDownloadUpdates: Bool
     var inAppNotificationsEnabled: Bool
@@ -15,6 +16,7 @@ struct SettingsFeature {
 
     init(settings: GlobalSettings = .default) {
       appearanceMode = settings.appearanceMode
+      confirmBeforeQuit = settings.confirmBeforeQuit
       updatesAutomaticallyCheckForUpdates = settings.updatesAutomaticallyCheckForUpdates
       updatesAutomaticallyDownloadUpdates = settings.updatesAutomaticallyDownloadUpdates
       inAppNotificationsEnabled = settings.inAppNotificationsEnabled
@@ -24,6 +26,7 @@ struct SettingsFeature {
     var globalSettings: GlobalSettings {
       GlobalSettings(
         appearanceMode: appearanceMode,
+        confirmBeforeQuit: confirmBeforeQuit,
         updatesAutomaticallyCheckForUpdates: updatesAutomaticallyCheckForUpdates,
         updatesAutomaticallyDownloadUpdates: updatesAutomaticallyDownloadUpdates,
         inAppNotificationsEnabled: inAppNotificationsEnabled,
@@ -36,6 +39,7 @@ struct SettingsFeature {
     case task
     case settingsLoaded(GlobalSettings)
     case setAppearanceMode(AppearanceMode)
+    case setConfirmBeforeQuit(Bool)
     case setUpdatesAutomaticallyCheckForUpdates(Bool)
     case setUpdatesAutomaticallyDownloadUpdates(Bool)
     case setInAppNotificationsEnabled(Bool)
@@ -62,6 +66,7 @@ struct SettingsFeature {
 
       case .settingsLoaded(let settings):
         state.appearanceMode = settings.appearanceMode
+        state.confirmBeforeQuit = settings.confirmBeforeQuit
         state.updatesAutomaticallyCheckForUpdates = settings.updatesAutomaticallyCheckForUpdates
         state.updatesAutomaticallyDownloadUpdates = settings.updatesAutomaticallyDownloadUpdates
         state.inAppNotificationsEnabled = settings.inAppNotificationsEnabled
@@ -70,6 +75,16 @@ struct SettingsFeature {
 
       case .setAppearanceMode(let mode):
         state.appearanceMode = mode
+        let settings = state.globalSettings
+        return .merge(
+          .send(.delegate(.settingsChanged(settings))),
+          .run { _ in
+            await settingsClient.save(settings)
+          }
+        )
+
+      case .setConfirmBeforeQuit(let value):
+        state.confirmBeforeQuit = value
         let settings = state.globalSettings
         return .merge(
           .send(.delegate(.settingsChanged(settings))),

@@ -97,6 +97,7 @@ struct SettingsFilePersistenceTests {
     }
 
     #expect(settings.global.appearanceMode == .dark)
+    #expect(settings.global.confirmBeforeQuit == true)
     #expect(settings.global.updatesAutomaticallyCheckForUpdates == false)
     #expect(settings.global.updatesAutomaticallyDownloadUpdates == true)
     #expect(settings.global.inAppNotificationsEnabled == true)

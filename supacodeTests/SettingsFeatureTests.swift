@@ -10,6 +10,7 @@ struct SettingsFeatureTests {
   @Test(.dependencies) func loadSettings() async {
     let loaded = GlobalSettings(
       appearanceMode: .dark,
+      confirmBeforeQuit: true,
       updatesAutomaticallyCheckForUpdates: false,
       updatesAutomaticallyDownloadUpdates: true,
       inAppNotificationsEnabled: false,
@@ -24,6 +25,7 @@ struct SettingsFeatureTests {
     await store.send(.task)
     await store.receive(.settingsLoaded(loaded)) {
       $0.appearanceMode = .dark
+      $0.confirmBeforeQuit = true
       $0.updatesAutomaticallyCheckForUpdates = false
       $0.updatesAutomaticallyDownloadUpdates = true
       $0.inAppNotificationsEnabled = false
@@ -35,6 +37,7 @@ struct SettingsFeatureTests {
   @Test(.dependencies) func savesUpdatesChanges() async {
     let initialSettings = GlobalSettings(
       appearanceMode: .system,
+      confirmBeforeQuit: true,
       updatesAutomaticallyCheckForUpdates: false,
       updatesAutomaticallyDownloadUpdates: false,
       inAppNotificationsEnabled: false,
@@ -57,6 +60,7 @@ struct SettingsFeatureTests {
     }
     let expectedSettings = GlobalSettings(
       appearanceMode: .light,
+      confirmBeforeQuit: initialSettings.confirmBeforeQuit,
       updatesAutomaticallyCheckForUpdates: initialSettings.updatesAutomaticallyCheckForUpdates,
       updatesAutomaticallyDownloadUpdates: initialSettings.updatesAutomaticallyDownloadUpdates,
       inAppNotificationsEnabled: initialSettings.inAppNotificationsEnabled,
@@ -98,6 +102,7 @@ struct SettingsFeatureTests {
 
     let loaded = GlobalSettings(
       appearanceMode: .light,
+      confirmBeforeQuit: false,
       updatesAutomaticallyCheckForUpdates: false,
       updatesAutomaticallyDownloadUpdates: true,
       inAppNotificationsEnabled: false,
@@ -106,6 +111,7 @@ struct SettingsFeatureTests {
 
     await store.send(.settingsLoaded(loaded)) {
       $0.appearanceMode = .light
+      $0.confirmBeforeQuit = false
       $0.updatesAutomaticallyCheckForUpdates = false
       $0.updatesAutomaticallyDownloadUpdates = true
       $0.inAppNotificationsEnabled = false
