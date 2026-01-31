@@ -56,10 +56,14 @@ nonisolated private func runProcess(
     let errorPipe = Pipe()
     process.standardOutput = outputPipe
     process.standardError = errorPipe
+    let outputHandle = outputPipe.fileHandleForReading
+    let errorHandle = errorPipe.fileHandleForReading
     try process.run()
+    let stdoutTask = Task.detached { outputHandle.readDataToEndOfFile() }
+    let stderrTask = Task.detached { errorHandle.readDataToEndOfFile() }
     process.waitUntilExit()
-    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+    let outputData = await stdoutTask.value
+    let errorData = await stderrTask.value
     let stdout = (String(bytes: outputData, encoding: .utf8) ?? "")
       .trimmingCharacters(in: .whitespacesAndNewlines)
     let stderr = (String(bytes: errorData, encoding: .utf8) ?? "")
