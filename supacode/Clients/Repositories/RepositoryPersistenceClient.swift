@@ -34,11 +34,11 @@ extension RepositoryPersistenceClient: DependencyKey {
         }
       },
       loadLastFocusedWorktreeID: {
-        @Shared(.lastFocusedWorktreeID) var lastFocused: Worktree.ID?
+        @Shared(.appStorage("lastFocusedWorktreeID")) var lastFocused: Worktree.ID?
         return lastFocused
       },
       saveLastFocusedWorktreeID: { id in
-        @Shared(.lastFocusedWorktreeID) var sharedLastFocused: Worktree.ID?
+        @Shared(.appStorage("lastFocusedWorktreeID")) var sharedLastFocused: Worktree.ID?
         $sharedLastFocused.withLock {
           $0 = id
         }

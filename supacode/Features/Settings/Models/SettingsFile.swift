@@ -3,36 +3,31 @@ nonisolated struct SettingsFile: Codable, Equatable, Sendable {
   var repositories: [String: RepositorySettings]
   var repositoryRoots: [String]
   var pinnedWorktreeIDs: [Worktree.ID]
-  var lastFocusedWorktreeID: Worktree.ID?
 
   enum CodingKeys: String, CodingKey {
     case global
     case repositories
     case repositoryRoots
     case pinnedWorktreeIDs
-    case lastFocusedWorktreeID
   }
 
   static let `default` = SettingsFile(
     global: .default,
     repositories: [:],
     repositoryRoots: [],
-    pinnedWorktreeIDs: [],
-    lastFocusedWorktreeID: nil
+    pinnedWorktreeIDs: []
   )
 
   init(
     global: GlobalSettings = .default,
     repositories: [String: RepositorySettings] = [:],
     repositoryRoots: [String] = [],
-    pinnedWorktreeIDs: [Worktree.ID] = [],
-    lastFocusedWorktreeID: Worktree.ID? = nil
+    pinnedWorktreeIDs: [Worktree.ID] = []
   ) {
     self.global = global
     self.repositories = repositories
     self.repositoryRoots = repositoryRoots
     self.pinnedWorktreeIDs = pinnedWorktreeIDs
-    self.lastFocusedWorktreeID = lastFocusedWorktreeID
   }
 
   init(from decoder: any Decoder) throws {
@@ -44,8 +39,6 @@ nonisolated struct SettingsFile: Codable, Equatable, Sendable {
     repositoryRoots = try container.decodeIfPresent([String].self, forKey: .repositoryRoots) ?? []
     pinnedWorktreeIDs =
       try container.decodeIfPresent([Worktree.ID].self, forKey: .pinnedWorktreeIDs) ?? []
-    lastFocusedWorktreeID =
-      try container.decodeIfPresent(Worktree.ID.self, forKey: .lastFocusedWorktreeID)
   }
 
   func encode(to encoder: any Encoder) throws {
@@ -54,6 +47,5 @@ nonisolated struct SettingsFile: Codable, Equatable, Sendable {
     try container.encode(repositories, forKey: .repositories)
     try container.encode(repositoryRoots, forKey: .repositoryRoots)
     try container.encode(pinnedWorktreeIDs, forKey: .pinnedWorktreeIDs)
-    try container.encode(lastFocusedWorktreeID, forKey: .lastFocusedWorktreeID)
   }
 }
