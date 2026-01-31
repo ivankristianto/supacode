@@ -13,6 +13,7 @@ struct RepoHeaderRow: View {
         .monospaced()
         .foregroundStyle(.secondary)
         .accessibilityHidden(true)
+        .frame(width: 10, alignment: .center)
       ZStack {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
           .fill(.secondary.opacity(0.2))
