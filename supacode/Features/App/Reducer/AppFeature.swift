@@ -415,6 +415,13 @@ struct AppFeature {
           await MainActor.run { _ = notificationSound?.play() }
         }
 
+      case .terminalEvent(.notificationIndicatorChanged(let count)):
+        return .run { _ in
+          await MainActor.run {
+            NSApplication.shared.dockTile.badgeLabel = count == 0 ? nil : String(count)
+          }
+        }
+
       case .terminalEvent(.runScriptStatusChanged(let worktreeID, let isRunning)):
         if isRunning {
           state.runScriptStatusByWorktreeID[worktreeID] = true

@@ -7,6 +7,7 @@ final class WorktreeTerminalManager {
   private let runtime: GhosttyRuntime
   private var states: [Worktree.ID: WorktreeTerminalState] = [:]
   private var notificationsEnabled = true
+  private var lastNotificationIndicatorCount: Int?
   private var eventContinuation: AsyncStream<TerminalClient.Event>.Continuation?
   var selectedWorktreeID: Worktree.ID?
 
@@ -51,6 +52,8 @@ final class WorktreeTerminalManager {
     eventContinuation?.finish()
     let (stream, continuation) = AsyncStream.makeStream(of: TerminalClient.Event.self)
     eventContinuation = continuation
+    lastNotificationIndicatorCount = nil
+    emitNotificationIndicatorCountIfNeeded()
     return stream
   }
 
@@ -76,6 +79,9 @@ final class WorktreeTerminalManager {
     }
     state.onNotificationReceived = { [weak self] title, body in
       self?.emit(.notificationReceived(worktreeID: worktree.id, title: title, body: body))
+    }
+    state.onNotificationIndicatorChanged = { [weak self] in
+      self?.emitNotificationIndicatorCountIfNeeded()
     }
     state.onTabCreated = { [weak self] in
       self?.emit(.tabCreated(worktreeID: worktree.id))
@@ -130,6 +136,7 @@ final class WorktreeTerminalManager {
       state.closeAllSurfaces()
     }
     states = states.filter { worktreeIDs.contains($0.key) }
+    emitNotificationIndicatorCountIfNeeded()
   }
 
   func stateIfExists(for worktreeID: Worktree.ID) -> WorktreeTerminalState? {
@@ -149,6 +156,7 @@ final class WorktreeTerminalManager {
     for state in states.values {
       state.setNotificationsEnabled(enabled)
     }
+    emitNotificationIndicatorCountIfNeeded()
   }
 
   func hasUnseenNotifications(for worktreeID: Worktree.ID) -> Bool {
@@ -161,5 +169,15 @@ final class WorktreeTerminalManager {
 
   private func emit(_ event: TerminalClient.Event) {
     eventContinuation?.yield(event)
+  }
+
+  private func emitNotificationIndicatorCountIfNeeded() {
+    let count = states.values.reduce(0) { count, state in
+      count + (state.hasUnseenNotification ? 1 : 0)
+    }
+    if count != lastNotificationIndicatorCount {
+      lastNotificationIndicatorCount = count
+      emit(.notificationIndicatorChanged(count: count))
+    }
   }
 }

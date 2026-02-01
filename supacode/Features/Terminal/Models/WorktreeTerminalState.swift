@@ -25,6 +25,7 @@ final class WorktreeTerminalState {
   var hasUnseenNotification = false
   var isSelected: () -> Bool = { false }
   var onNotificationReceived: ((String, String) -> Void)?
+  var onNotificationIndicatorChanged: (() -> Void)?
   var onTabCreated: (() -> Void)?
   var onTabClosed: (() -> Void)?
   var onFocusChanged: ((UUID) -> Void)?
@@ -349,12 +350,19 @@ final class WorktreeTerminalState {
   func setNotificationsEnabled(_ enabled: Bool) {
     notificationsEnabled = enabled
     if !enabled {
+      let wasUnseen = hasUnseenNotification
       hasUnseenNotification = false
+      if wasUnseen {
+        onNotificationIndicatorChanged?()
+      }
     }
   }
 
   func clearNotificationIndicator() {
-    hasUnseenNotification = false
+    if hasUnseenNotification {
+      hasUnseenNotification = false
+      onNotificationIndicatorChanged?()
+    }
   }
 
   func needsSetupScript() -> Bool {
@@ -492,8 +500,12 @@ final class WorktreeTerminalState {
         title: trimmedTitle,
         body: trimmedBody
       ))
+    let wasUnseen = hasUnseenNotification
     if !isSelected() {
       hasUnseenNotification = true
+    }
+    if hasUnseenNotification != wasUnseen {
+      onNotificationIndicatorChanged?()
     }
     onNotificationReceived?(trimmedTitle, trimmedBody)
   }
