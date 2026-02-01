@@ -38,6 +38,7 @@ struct SupacodeApp: App {
 
   @MainActor init() {
     NSWindow.allowsAutomaticWindowTabbing = false
+    UserDefaults.standard.set(200, forKey: "NSInitialToolTipDelay")
     #if !DEBUG
       SentrySDK.start { options in
         options.dsn = "https://fb4d394e0bd3e72871b01c7ef3cac129@o1224589.ingest.us.sentry.io/4510770231050240"
