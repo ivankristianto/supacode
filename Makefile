@@ -16,7 +16,7 @@ GHOSTTY_BUILD_OUTPUTS := $(GHOSTTY_XCFRAMEWORK_PATH) $(GHOSTTY_RESOURCE_PATH) $(
 VERSION ?=
 BUILD ?=
 .DEFAULT_GOAL := help
-.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources check test update-wt bump-version bump-and-release install-git-hooks
+.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources format lint check test update-wt bump-version bump-and-release install-git-hooks
 
 help:  # Display this help.
 	@-+echo "Run make with one of the following targets:"
@@ -65,9 +65,13 @@ install-dev-build: build-app # install dev build to /Applications
 test: build-ghostty-xcframework
 	xcodebuild test -project supacode.xcodeproj -scheme supacode -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation 2>&1
 
-check: # Format and lint
+format: # Format code with swift-format (local only)
 	swift-format -p --in-place --recursive --configuration ./.swift-format.json supacode supacodeTests
+
+lint: # Lint code with swiftlint
 	mise exec -- swiftlint --fix --quiet
+
+check: format lint # Format and lint
 
 update-wt: # Download git-wt binary to Resources
 	@mkdir -p "$(CURRENT_MAKEFILE_DIR)/Resources/git-wt"
