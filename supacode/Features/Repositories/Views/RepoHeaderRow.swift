@@ -9,7 +9,7 @@ struct RepoHeaderRow: View {
   var body: some View {
     HStack {
       Image(systemName: "chevron.right")
-        .ghosttyMonospaced(.caption)
+        .font(.caption)
         .foregroundStyle(.secondary)
         .accessibilityHidden(true)
         .rotationEffect(.degrees(isExpanded ? 90 : 0))
@@ -19,17 +19,17 @@ struct RepoHeaderRow: View {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
           .fill(.secondary.opacity(0.2))
         Text(initials)
-          .ghosttyMonospaced(.caption)
+          .font(.caption)
           .foregroundStyle(.secondary)
       }
       .frame(width: 24, height: 24)
       .clipShape(.rect(cornerRadius: 6, style: .continuous))
       Text(name)
-        .ghosttyMonospaced(.headline)
+        .font(.headline)
         .foregroundStyle(.primary)
       if isRemoving {
         Text("Removing...")
-          .ghosttyMonospaced(.caption)
+          .font(.caption)
           .foregroundStyle(.secondary)
       }
     }

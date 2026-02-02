@@ -12,18 +12,18 @@ struct WorktreeLoadingView: View {
     VStack {
       ProgressView()
       Text(info.name)
-        .ghosttyMonospaced(.headline)
+        .font(.headline)
       if let repositoryName = info.repositoryName {
         Text("\(actionLabel) worktree in \(repositoryName)")
-          .ghosttyMonospaced(.subheadline)
+          .font(.subheadline)
           .foregroundStyle(.secondary)
       } else {
         Text("\(actionLabel) worktree...")
-          .ghosttyMonospaced(.subheadline)
+          .font(.subheadline)
           .foregroundStyle(.secondary)
       }
       Text(followup)
-        .ghosttyMonospaced(.subheadline)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

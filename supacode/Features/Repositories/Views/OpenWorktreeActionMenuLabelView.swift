@@ -28,14 +28,14 @@ struct OpenWorktreeActionMenuLabelView: View {
       if let shortcutHint {
         HStack(spacing: 2) {
           Text(action.labelTitle)
-            .ghosttyMonospaced(.body)
+            .font(.body)
           Text("(\(shortcutHint))")
-            .ghosttyMonospaced(.body)
+            .font(.body)
             .foregroundStyle(.secondary)
         }
       } else {
         Text(action.labelTitle)
-          .ghosttyMonospaced(.body)
+          .font(.body)
       }
     }
   }

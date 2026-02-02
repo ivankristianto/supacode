@@ -30,7 +30,7 @@ struct PullRequestStatusButton: View {
         }
       }
     }
-    .ghosttyMonospaced(.caption)
+    .font(.caption)
   }
 
 }

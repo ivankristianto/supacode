@@ -247,11 +247,11 @@ struct MiddleStatusView: View {
       HStack(spacing: 8) {
         Image(systemName: style.icon)
           .foregroundStyle(style.color)
-          .ghosttyMonospaced(.callout)
+          .font(.callout)
           .accessibilityHidden(true)
 
         Text(Self.message(for: context.date))
-          .ghosttyMonospaced(.footnote)
+          .font(.footnote)
           .foregroundStyle(.secondary)
       }
     }
@@ -264,10 +264,10 @@ struct XcodeStyleDiagnosticsView: View {
       HStack(spacing: 5) {
         Image(systemName: "exclamationmark.triangle.fill")
           .foregroundStyle(.yellow)
-          .ghosttyMonospaced(.footnote)
+          .font(.footnote)
           .accessibilityHidden(true)
         Text("3")
-          .ghosttyMonospaced(.footnote, weight: .medium)
+          .font(.system(.footnote, weight: .medium))
       }
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
@@ -276,10 +276,10 @@ struct XcodeStyleDiagnosticsView: View {
       HStack(spacing: 5) {
         Image(systemName: "xmark.circle.fill")
           .foregroundStyle(.red)
-          .ghosttyMonospaced(.footnote)
+          .font(.footnote)
           .accessibilityHidden(true)
         Text("0")
-          .ghosttyMonospaced(.footnote, weight: .medium)
+          .font(.system(.footnote, weight: .medium))
       }
       .padding(.horizontal, 8)
       .padding(.vertical, 4)

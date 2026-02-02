@@ -14,7 +14,6 @@ struct FailedRepositoryRow: View {
           .fill(.secondary.opacity(0.2))
         Text(initials)
           .font(.caption)
-          .ghosttyMonospaced(.caption)
           .foregroundStyle(.secondary)
       }
       .frame(width: 24, height: 24)
@@ -22,10 +21,8 @@ struct FailedRepositoryRow: View {
       VStack(alignment: .leading, spacing: 2) {
         Text(name)
           .font(.headline)
-          .ghosttyMonospaced(.headline)
         Text(path)
           .font(.caption)
-          .ghosttyMonospaced(.caption)
           .foregroundStyle(.secondary)
       }
       Spacer(minLength: 8)

@@ -84,11 +84,11 @@ struct GithubSettingsView: View {
           case .authenticated(let username, let host):
             LabeledContent("Signed in as") {
               Text(username)
-                .ghosttyMonospaced(.body)
+                .font(.body)
             }
             LabeledContent("Host") {
               Text(host)
-                .ghosttyMonospaced(.body)
+                .font(.body)
             }
 
           case .error(let message):

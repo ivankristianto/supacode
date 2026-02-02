@@ -9,7 +9,6 @@ final class SettingsWindowManager {
   private var settingsWindow: NSWindow?
   private var store: StoreOf<AppFeature>?
   private var ghosttyShortcuts: GhosttyShortcutManager?
-  private var ghosttyFonts: GhosttyFontManager?
   private var commandKeyObserver: CommandKeyObserver?
 
   private init() {}
@@ -17,12 +16,10 @@ final class SettingsWindowManager {
   func configure(
     store: StoreOf<AppFeature>,
     ghosttyShortcuts: GhosttyShortcutManager,
-    ghosttyFonts: GhosttyFontManager,
     commandKeyObserver: CommandKeyObserver
   ) {
     self.store = store
     self.ghosttyShortcuts = ghosttyShortcuts
-    self.ghosttyFonts = ghosttyFonts
     self.commandKeyObserver = commandKeyObserver
   }
 
@@ -35,12 +32,11 @@ final class SettingsWindowManager {
       return
     }
 
-    guard let store, let ghosttyShortcuts, let ghosttyFonts, let commandKeyObserver else {
+    guard let store, let ghosttyShortcuts, let commandKeyObserver else {
       return
     }
     let settingsView = SettingsView(store: store)
       .environment(ghosttyShortcuts)
-      .environment(ghosttyFonts)
       .environment(commandKeyObserver)
     let hostingController = NSHostingController(rootView: settingsView)
 
