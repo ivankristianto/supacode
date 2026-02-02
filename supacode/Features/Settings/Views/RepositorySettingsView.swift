@@ -62,14 +62,14 @@ struct RepositorySettingsView: View {
             text: settings.setupScript
           )
           .font(.body)
-          .monospaced()
+          .ghosttyMonospaced(.body)
           .frame(minHeight: 120)
           if store.settings.setupScript.isEmpty {
             Text("claude --dangerously-skip-permissions")
               .foregroundStyle(.secondary)
               .padding(.leading, 6)
               .font(.body)
-              .monospaced()
+              .ghosttyMonospaced(.body)
               .allowsHitTesting(false)
           }
         }
@@ -86,14 +86,14 @@ struct RepositorySettingsView: View {
             text: settings.runScript
           )
           .font(.body)
-          .monospaced()
+          .ghosttyMonospaced(.body)
           .frame(minHeight: 120)
           if store.settings.runScript.isEmpty {
             Text("npm run dev")
               .foregroundStyle(.secondary)
               .padding(.leading, 6)
               .font(.body)
-              .monospaced()
+              .ghosttyMonospaced(.body)
               .allowsHitTesting(false)
           }
         }

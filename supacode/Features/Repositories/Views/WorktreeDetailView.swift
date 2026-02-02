@@ -240,8 +240,7 @@ struct WorktreeDetailView: View {
         }
       } label: {
         Image(systemName: "chevron.down")
-          .font(.caption2)
-          .monospaced()
+          .ghosttyMonospaced(.caption2)
           .accessibilityLabel("Open in menu")
       }
       .imageScale(.small)
@@ -329,13 +328,13 @@ private struct RunScriptToolbarButton: View {
 
         if commandKeyObserver.isPressed {
           Text(config.shortcut)
-            .monospaced()
+            .ghosttyMonospaced(.caption)
             .foregroundStyle(.secondary)
         }
       }
     }
     .font(.caption)
-    .monospaced()
+    .ghosttyMonospaced(.caption)
     .help(config.helpText)
     .disabled(!config.isEnabled)
   }
