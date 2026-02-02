@@ -43,6 +43,6 @@ struct SidebarFooterView: View {
     .font(.callout)
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.regularMaterial)
+    .background(.bar)
   }
 }
