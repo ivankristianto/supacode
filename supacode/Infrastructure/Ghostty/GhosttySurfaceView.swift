@@ -30,6 +30,17 @@ final class GhosttySurfaceView: NSView, Identifiable {
   private var lastScrollbar: ScrollbarState?
   private var eventMonitor: Any?
   private var prevPressureStage: Int = 0
+  var passwordInput: Bool = false {
+    didSet {
+      let input = SecureInput.shared
+      let id = ObjectIdentifier(self)
+      if passwordInput {
+        input.setScoped(id, focused: focused)
+      } else {
+        input.removeScoped(id)
+      }
+    }
+  }
   weak var scrollWrapper: GhosttySurfaceScrollView? {
     didSet {
       if let lastScrollbar {
@@ -113,6 +124,10 @@ final class GhosttySurfaceView: NSView, Identifiable {
     if let eventMonitor {
       NSEvent.removeMonitor(eventMonitor)
     }
+    let id = ObjectIdentifier(self)
+    MainActor.assumeIsolated {
+      SecureInput.shared.removeScoped(id)
+    }
     closeSurface()
     if let workingDirectoryCString {
       free(workingDirectoryCString)
@@ -185,6 +200,9 @@ final class GhosttySurfaceView: NSView, Identifiable {
       focused = true
       setSurfaceFocus(true)
       onFocusChange?(true)
+      if passwordInput {
+        SecureInput.shared.setScoped(ObjectIdentifier(self), focused: true)
+      }
     }
     return result
   }
@@ -195,6 +213,9 @@ final class GhosttySurfaceView: NSView, Identifiable {
       focused = false
       setSurfaceFocus(false)
       onFocusChange?(false)
+      if passwordInput {
+        SecureInput.shared.setScoped(ObjectIdentifier(self), focused: false)
+      }
     }
     return result
   }

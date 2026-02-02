@@ -382,6 +382,16 @@ final class GhosttySurfaceBridge {
     switch action.tag {
     case GHOSTTY_ACTION_SECURE_INPUT:
       state.secureInput = action.action.secure_input
+      switch action.action.secure_input {
+      case GHOSTTY_SECURE_INPUT_ON:
+        surfaceView?.passwordInput = true
+      case GHOSTTY_SECURE_INPUT_OFF:
+        surfaceView?.passwordInput = false
+      case GHOSTTY_SECURE_INPUT_TOGGLE:
+        surfaceView?.passwordInput.toggle()
+      default:
+        break
+      }
       return true
 
     case GHOSTTY_ACTION_FLOAT_WINDOW:
