@@ -290,6 +290,17 @@ private struct CommandPaletteRowView: View {
     }
   }
 
+  private var explicitShortcutSymbols: [String]? {
+    switch row.kind {
+    case .openSettings:
+      return AppShortcuts.openSettings.displaySymbols
+    case .newWorktree:
+      return AppShortcuts.newWorktree.displaySymbols
+    case .worktreeSelect, .runWorktree, .openWorktreeInEditor, .removeWorktree:
+      return nil
+    }
+  }
+
   var body: some View {
     Button(action: activate) {
       HStack(spacing: 8) {
@@ -323,7 +334,10 @@ private struct CommandPaletteRowView: View {
             .foregroundStyle(.secondary)
         }
 
-        if let shortcutIndex {
+        if let explicitShortcutSymbols {
+          ShortcutSymbolsView(symbols: explicitShortcutSymbols)
+            .foregroundStyle(.secondary)
+        } else if let shortcutIndex {
           ShortcutSymbolsView(symbols: commandPaletteShortcutSymbols(for: shortcutIndex))
             .foregroundStyle(.secondary)
         }
@@ -368,10 +382,24 @@ private struct CommandPaletteRowView: View {
     case .openWorktreeInEditor:
       base = "Open \(row.title) in Editor"
     }
+    if let explicitShortcutLabel {
+      return "\(base) (\(explicitShortcutLabel))"
+    }
     if let shortcutIndex {
       return "\(base) (\(commandPaletteShortcutLabel(for: shortcutIndex)))"
     }
     return base
+  }
+
+  private var explicitShortcutLabel: String? {
+    switch row.kind {
+    case .openSettings:
+      return AppShortcuts.openSettings.display
+    case .newWorktree:
+      return AppShortcuts.newWorktree.display
+    case .worktreeSelect, .runWorktree, .openWorktreeInEditor, .removeWorktree:
+      return nil
+    }
   }
 }
 
