@@ -21,12 +21,14 @@ extension ShellClient: DependencyKey {
       let execCommand = shellExecCommand(for: shellURL)
       let shellArguments =
         ["-l", "-c", execCommand, "--", executableURL.path(percentEncoded: false)] + arguments
-      print("[Shell] runLogin: \(shellURL.path) \(shellArguments.joined(separator: " "))")
-      return try await runProcess(
+      print("[Shell] runLogin\n\tcwd: \(currentDirectoryURL?.path(percentEncoded: false) ?? "nil")\n\tcmd: \(shellURL.path) \(shellArguments.joined(separator: " "))")
+      let result = try await runProcess(
         executableURL: shellURL,
         arguments: shellArguments,
         currentDirectoryURL: currentDirectoryURL
       )
+      print("\tout: \(result.stdout)")
+      return result
     }
   )
 
