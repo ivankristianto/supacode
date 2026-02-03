@@ -438,11 +438,18 @@ struct AppFeature {
       case .updates:
         return .none
 
-      case .terminalEvent(.notificationReceived):
-        guard state.settings.notificationSoundEnabled else { return .none }
-        return .run { _ in
-          await MainActor.run { _ = notificationSound?.play() }
+      case .terminalEvent(.notificationReceived(let worktreeID, _, _)):
+        var effects: [Effect<Action>] = [
+          .send(.repositories(.worktreeNotificationReceived(worktreeID)))
+        ]
+        if state.settings.notificationSoundEnabled {
+          effects.append(
+            .run { _ in
+              await MainActor.run { _ = notificationSound?.play() }
+            }
+          )
         }
+        return .merge(effects)
 
       case .terminalEvent(.notificationIndicatorChanged(let count)):
         state.notificationIndicatorCount = count

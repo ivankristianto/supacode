@@ -88,6 +88,7 @@ struct RepositoriesFeature {
     case unpinWorktree(Worktree.ID)
     case presentAlert(title: String, message: String)
     case worktreeInfoEvent(WorktreeInfoWatcherClient.Event)
+    case worktreeNotificationReceived(Worktree.ID)
     case worktreeBranchNameLoaded(worktreeID: Worktree.ID, name: String)
     case worktreeLineChangesLoaded(worktreeID: Worktree.ID, added: Int, removed: Int)
     case worktreePullRequestLoaded(worktreeID: Worktree.ID, pullRequest: GithubPullRequest?)
@@ -876,6 +877,32 @@ struct RepositoriesFeature {
         state.alert = errorAlert(title: title, message: message)
         return .none
 
+      case .worktreeNotificationReceived(let worktreeID):
+        guard let repositoryID = state.repositoryID(containing: worktreeID),
+          let repository = state.repositories[id: repositoryID],
+          let worktree = repository.worktrees[id: worktreeID]
+        else {
+          return .none
+        }
+        if state.isMainWorktree(worktree) || state.isWorktreePinned(worktree) {
+          return .none
+        }
+        let reordered = reorderedUnpinnedWorktreeIDs(
+          for: worktreeID,
+          in: repository,
+          state: state
+        )
+        if state.worktreeOrderByRepository[repositoryID] == reordered {
+          return .none
+        }
+        withAnimation(.snappy(duration: 0.2)) {
+          state.worktreeOrderByRepository[repositoryID] = reordered
+        }
+        let worktreeOrderByRepository = state.worktreeOrderByRepository
+        return .run { _ in
+          await repositoryPersistence.saveWorktreeOrderByRepository(worktreeOrderByRepository)
+        }
+
       case .worktreeInfoEvent(let event):
         switch event {
         case .branchChanged(let worktreeID):
@@ -1617,6 +1644,20 @@ private func updateWorktreePullRequest(
   } else {
     state.worktreeInfoByID[worktreeID] = entry
   }
+}
+
+private func reorderedUnpinnedWorktreeIDs(
+  for worktreeID: Worktree.ID,
+  in repository: Repository,
+  state: RepositoriesFeature.State
+) -> [Worktree.ID] {
+  var ordered = state.orderedUnpinnedWorktreeIDs(in: repository)
+  guard let index = ordered.firstIndex(of: worktreeID) else {
+    return ordered
+  }
+  ordered.remove(at: index)
+  ordered.insert(worktreeID, at: 0)
+  return ordered
 }
 
 private func restoreSelection(
