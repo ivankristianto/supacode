@@ -1,3 +1,4 @@
+import AppKit
 import ComposableArchitecture
 import SwiftUI
 
@@ -70,6 +71,10 @@ struct WorktreeDetailView: View {
           },
           onOpenActionSelectionChanged: { action in
             store.send(.openActionSelectionChanged(action))
+          },
+          onCopyPath: {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(selectedWorktree.workingDirectory.path, forType: .string)
           },
           onRunScript: { store.send(.runScript) },
           onStopRunScript: { store.send(.stopRunScript) }
@@ -161,6 +166,7 @@ struct WorktreeDetailView: View {
     let onRenameBranch: (String) -> Void
     let onOpenWorktree: (OpenWorktreeAction) -> Void
     let onOpenActionSelectionChanged: (OpenWorktreeAction) -> Void
+    let onCopyPath: () -> Void
     let onRunScript: () -> Void
     let onStopRunScript: () -> Void
 
@@ -237,6 +243,11 @@ struct WorktreeDetailView: View {
           .buttonStyle(.plain)
           .help(openActionHelpText(for: action, isDefault: isDefault))
         }
+        Divider()
+        Button("Copy Path") {
+          onCopyPath()
+        }
+        .help("Copy path")
       } label: {
         Image(systemName: "chevron.down")
           .font(.caption2)
@@ -389,6 +400,7 @@ private struct WorktreeToolbarPreview: View {
         onRenameBranch: { _ in },
         onOpenWorktree: { _ in },
         onOpenActionSelectionChanged: { _ in },
+        onCopyPath: {},
         onRunScript: {},
         onStopRunScript: {}
       )
