@@ -8,6 +8,7 @@ struct WorktreeRowsView: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
   let terminalManager: WorktreeTerminalManager
   @Environment(CommandKeyObserver.self) private var commandKeyObserver
+  @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     if isExpanded {
@@ -84,64 +85,67 @@ struct WorktreeRowsView: View {
     let isSelected = row.id == store.state.selectedWorktreeID
     let showsNotificationIndicator = !isSelected && terminalManager.hasUnseenNotifications(for: row.id)
     let displayName = row.isDeleting ? "\(row.name) (removing...)" : row.name
-    if row.isRemovable, let worktree = store.state.worktree(for: row.id), !isRepositoryRemoving {
-      WorktreeRow(
-        name: displayName,
-        info: row.info,
-        isPinned: row.isPinned,
-        isMainWorktree: row.isMainWorktree,
-        isLoading: row.isPending || row.isDeleting,
-        taskStatus: taskStatus,
-        isRunScriptRunning: isRunScriptRunning,
-        showsNotificationIndicator: showsNotificationIndicator,
-        shortcutHint: shortcutHint
-      )
-      .tag(SidebarSelection.worktree(row.id))
-      .listRowInsets(EdgeInsets())
-      .transition(.opacity)
-      .moveDisabled(moveDisabled)
-      .contextMenu {
-        if !row.isMainWorktree {
-          if row.isPinned {
-            Button("Unpin") {
-              store.send(.unpinWorktree(worktree.id))
+    Group {
+      if row.isRemovable, let worktree = store.state.worktree(for: row.id), !isRepositoryRemoving {
+        WorktreeRow(
+          name: displayName,
+          info: row.info,
+          isPinned: row.isPinned,
+          isMainWorktree: row.isMainWorktree,
+          isLoading: row.isPending || row.isDeleting,
+          taskStatus: taskStatus,
+          isRunScriptRunning: isRunScriptRunning,
+          showsNotificationIndicator: showsNotificationIndicator,
+          shortcutHint: shortcutHint
+        )
+        .tag(SidebarSelection.worktree(row.id))
+        .listRowInsets(EdgeInsets())
+        .transition(.opacity)
+        .moveDisabled(moveDisabled)
+        .contextMenu {
+          if !row.isMainWorktree {
+            if row.isPinned {
+              Button("Unpin") {
+                store.send(.unpinWorktree(worktree.id))
+              }
+              .help("Unpin")
+            } else {
+              Button("Pin to top") {
+                store.send(.pinWorktree(worktree.id))
+              }
+              .help("Pin to top")
             }
-            .help("Unpin")
-          } else {
-            Button("Pin to top") {
-              store.send(.pinWorktree(worktree.id))
-            }
-            .help("Pin to top")
           }
+          Button("Copy Path") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(worktree.workingDirectory.path, forType: .string)
+          }
+          Button("Remove worktree (⌘⌫)") {
+            store.send(.requestRemoveWorktree(worktree.id, repository.id))
+          }
+          .help(row.isMainWorktree ? "Main worktree can't be removed" : "Remove worktree (⌘⌫)")
+          .disabled(row.isMainWorktree)
         }
-        Button("Copy Path") {
-          NSPasteboard.general.clearContents()
-          NSPasteboard.general.setString(worktree.workingDirectory.path, forType: .string)
-        }
-        Button("Remove worktree (⌘⌫)") {
-          store.send(.requestRemoveWorktree(worktree.id, repository.id))
-        }
-        .help(row.isMainWorktree ? "Main worktree can't be removed" : "Remove worktree (⌘⌫)")
-        .disabled(row.isMainWorktree)
+      } else {
+        WorktreeRow(
+          name: displayName,
+          info: row.info,
+          isPinned: row.isPinned,
+          isMainWorktree: row.isMainWorktree,
+          isLoading: row.isPending || row.isDeleting,
+          taskStatus: taskStatus,
+          isRunScriptRunning: isRunScriptRunning,
+          showsNotificationIndicator: showsNotificationIndicator,
+          shortcutHint: shortcutHint
+        )
+        .tag(SidebarSelection.worktree(row.id))
+        .listRowInsets(EdgeInsets())
+        .transition(.opacity)
+        .moveDisabled(moveDisabled)
+        .disabled(isRepositoryRemoving)
       }
-    } else {
-      WorktreeRow(
-        name: displayName,
-        info: row.info,
-        isPinned: row.isPinned,
-        isMainWorktree: row.isMainWorktree,
-        isLoading: row.isPending || row.isDeleting,
-        taskStatus: taskStatus,
-        isRunScriptRunning: isRunScriptRunning,
-        showsNotificationIndicator: showsNotificationIndicator,
-        shortcutHint: shortcutHint
-      )
-      .tag(SidebarSelection.worktree(row.id))
-      .listRowInsets(EdgeInsets())
-      .transition(.opacity)
-      .moveDisabled(moveDisabled)
-      .disabled(isRepositoryRemoving)
     }
+    .environment(\.colorScheme, colorScheme)
   }
 
   private func worktreeShortcutHint(for index: Int?) -> String? {

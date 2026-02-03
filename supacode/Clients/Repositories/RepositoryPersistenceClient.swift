@@ -93,7 +93,7 @@ extension DependencyValues {
   }
 }
 
-private enum RepositoryOrderNormalizer {
+nonisolated enum RepositoryOrderNormalizer {
   static func normalizeRepositoryIDs(_ ids: [Repository.ID]) -> [Repository.ID] {
     RepositoryPathNormalizer.normalize(ids)
   }
