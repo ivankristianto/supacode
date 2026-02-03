@@ -68,7 +68,8 @@ struct GitClient {
     if trimmed.isEmpty {
       return []
     }
-    let data = Data(trimmed.utf8)
+    let jsonString = Self.extractJSON(from: trimmed)
+    let data = Data(jsonString.utf8)
     let entries = try JSONDecoder().decode([GitWtWorktreeEntry].self, from: data)
       .filter { !$0.isBare }
     let worktreeEntries = entries.enumerated().map { index, entry in
@@ -528,6 +529,15 @@ struct GitClient {
       return path
     }
     return path.deletingLastPathComponent()
+  }
+
+  nonisolated static func extractJSON(from output: String) -> String {
+    guard let startIndex = output.firstIndex(of: "["),
+      let endIndex = output.lastIndex(of: "]")
+    else {
+      return output
+    }
+    return String(output[startIndex...endIndex])
   }
 
   nonisolated private func runGitWorktreeRemove(
