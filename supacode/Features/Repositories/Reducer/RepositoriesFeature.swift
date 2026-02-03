@@ -110,18 +110,6 @@ struct RepositoriesFeature {
     let didPruneWorktreeOrder: Bool
   }
 
-  private struct WorktreeSelectionSignature: Equatable {
-    let id: Worktree.ID
-    let workingDirectory: URL
-    let repositoryRootURL: URL
-
-    init(_ worktree: Worktree) {
-      id = worktree.id
-      workingDirectory = worktree.workingDirectory
-      repositoryRootURL = worktree.repositoryRootURL
-    }
-  }
-
   enum Alert: Equatable {
     case confirmRemoveWorktree(Worktree.ID, Repository.ID)
     case confirmRemoveRepository(Repository.ID)
@@ -1209,9 +1197,13 @@ struct RepositoriesFeature {
     if previousSelectionID != selectedWorktreeID {
       return true
     }
-    let previousSignature = previousSelectedWorktree.map(WorktreeSelectionSignature.init)
-    let selectedSignature = selectedWorktree.map(WorktreeSelectionSignature.init)
-    return previousSignature != selectedSignature
+    if previousSelectedWorktree?.workingDirectory != selectedWorktree?.workingDirectory {
+      return true
+    }
+    if previousSelectedWorktree?.repositoryRootURL != selectedWorktree?.repositoryRootURL {
+      return true
+    }
+    return false
   }
 }
 

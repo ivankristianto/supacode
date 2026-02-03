@@ -51,7 +51,6 @@ struct RepositoriesFeaturePersistenceTests {
       $0.shouldRestoreLastFocusedWorktree = false
       $0.isInitialLoadComplete = true
     }
-    await store.receive(\.delegate.repositoriesChanged)
     await store.finish()
   }
 }
