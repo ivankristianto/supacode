@@ -146,6 +146,7 @@ struct WorktreeRowsView: View {
       }
     }
     .environment(\.colorScheme, colorScheme)
+    .preferredColorScheme(colorScheme)
   }
 
   private func worktreeShortcutHint(for index: Int?) -> String? {

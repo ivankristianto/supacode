@@ -10,6 +10,7 @@ struct WorktreeRow: View {
   let isRunScriptRunning: Bool
   let showsNotificationIndicator: Bool
   let shortcutHint: String?
+  @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     let showsSpinner = isLoading || taskStatus == .running
@@ -34,6 +35,7 @@ struct WorktreeRow: View {
       state: pullRequestState,
       number: pullRequestNumber
     )
+    let nameColor = colorScheme == .dark ? Color.white : Color.primary
     HStack(alignment: .center) {
       ZStack {
         if showsNotificationIndicator {
@@ -60,11 +62,13 @@ struct WorktreeRow: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(name)
             .font(.body)
+            .foregroundStyle(nameColor)
           WorktreeRowInfoView(addedLines: displayAddedLines, removedLines: displayRemovedLines)
         }
       } else {
         Text(name)
           .font(.body)
+          .foregroundStyle(nameColor)
       }
       Spacer(minLength: 8)
       if isRunScriptRunning {
