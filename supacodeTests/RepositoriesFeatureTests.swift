@@ -495,6 +495,16 @@ struct RepositoriesFeatureTests {
       $0.gitClient.worktrees = { _ in [existingWorktree] }
     }
 
+    let expectedAlert = AlertState<RepositoriesFeature.Alert> {
+      TextState("Unable to create worktree")
+    } actions: {
+      ButtonState(role: .cancel) {
+        TextState("OK")
+      }
+    } message: {
+      TextState("boom")
+    }
+
     await store.send(
       .createRandomWorktreeFailed(
         title: "Unable to create worktree",
@@ -514,6 +524,7 @@ struct RepositoriesFeatureTests {
       $0.worktreeInfoByID = [:]
       $0.selectedWorktreeID = existingWorktree.id
       $0.repositories = [updatedRepository]
+      $0.alert = expectedAlert
     }
 
     await store.receive(\.delegate.repositoriesChanged)
