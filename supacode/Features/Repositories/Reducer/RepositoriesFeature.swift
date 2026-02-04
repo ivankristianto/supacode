@@ -219,6 +219,7 @@ struct RepositoriesFeature {
         let applyResult = applyRepositories(
           repositories,
           roots: roots,
+          shouldPruneArchivedWorktreeIDs: failures.isEmpty,
           state: &state,
           animated: animated
         )
@@ -312,6 +313,7 @@ struct RepositoriesFeature {
         let applyResult = applyRepositories(
           repositories,
           roots: roots,
+          shouldPruneArchivedWorktreeIDs: failures.isEmpty,
           state: &state,
           animated: false
         )
@@ -1323,6 +1325,7 @@ struct RepositoriesFeature {
   private func applyRepositories(
     _ repositories: [Repository],
     roots: [URL],
+    shouldPruneArchivedWorktreeIDs: Bool,
     state: inout State,
     animated: Bool
   ) -> ApplyRepositoriesResult {
@@ -1379,10 +1382,10 @@ struct RepositoriesFeature {
     let didPrunePinned = prunePinnedWorktreeIDs(state: &state)
     let didPruneRepositoryOrder = pruneRepositoryOrderIDs(roots: roots, state: &state)
     let didPruneWorktreeOrder = pruneWorktreeOrderByRepository(roots: roots, state: &state)
-    let didPruneArchivedWorktreeIDs = pruneArchivedWorktreeIDs(
-      availableWorktreeIDs: availableWorktreeIDs,
-      state: &state
-    )
+    let didPruneArchivedWorktreeIDs =
+      shouldPruneArchivedWorktreeIDs
+        ? pruneArchivedWorktreeIDs(availableWorktreeIDs: availableWorktreeIDs, state: &state)
+        : false
     if !state.isShowingArchivedWorktrees, !isSelectionValid(state.selectedWorktreeID, state: state) {
       state.selection = nil
     }

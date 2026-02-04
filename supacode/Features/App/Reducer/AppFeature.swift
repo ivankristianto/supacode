@@ -106,10 +106,7 @@ struct AppFeature {
         guard let worktree else {
           state.openActionSelection = .finder
           state.selectedRunScript = ""
-          return .merge(
-            .run { _ in
-              await repositoryPersistence.saveLastFocusedWorktreeID(lastFocusedWorktreeID)
-            },
+          var effects: [Effect<Action>] = [
             .run { _ in
               await terminalClient.send(.setSelectedWorktreeID(nil))
             },
@@ -118,8 +115,17 @@ struct AppFeature {
             },
             .run { _ in
               await worktreeInfoWatcher.send(.setWorktrees(worktreesForWatcher))
-            }
-          )
+            },
+          ]
+          if !state.repositories.isShowingArchivedWorktrees {
+            effects.insert(
+              .run { _ in
+                await repositoryPersistence.saveLastFocusedWorktreeID(lastFocusedWorktreeID)
+              },
+              at: 0
+            )
+          }
+          return .merge(effects)
         }
         let rootURL = worktree.repositoryRootURL
         let worktreeID = worktree.id

@@ -295,6 +295,33 @@ struct RepositoriesFeatureTests {
     )
   }
 
+  @Test func archivedWorktreeIDsPreservedWhenRepositoryLoadFails() async {
+    let repoRoot = "/tmp/repo"
+    let worktree = makeWorktree(id: "/tmp/repo/wt1", name: "wt1", repoRoot: repoRoot)
+    let repository = makeRepository(id: repoRoot, worktrees: [worktree])
+    var initialState = makeState(repositories: [repository])
+    initialState.archivedWorktreeIDs = [worktree.id]
+    let store = TestStore(initialState: initialState) {
+      RepositoriesFeature()
+    }
+
+    await store.send(
+      .repositoriesLoaded(
+        [],
+        failures: [RepositoriesFeature.LoadFailure(rootID: repository.id, message: "boom")],
+        roots: [repository.rootURL],
+        animated: false
+      )
+    ) {
+      $0.loadFailuresByID = [repository.id: "boom"]
+      $0.repositories = []
+      $0.isInitialLoadComplete = true
+    }
+
+    await store.receive(\.delegate.repositoriesChanged)
+    #expect(store.state.archivedWorktreeIDs == [worktree.id])
+  }
+
   @Test func repositoriesLoadedSkipsSelectionChangeWhenOnlyDisplayDataChanges() async {
     let repoRoot = "/tmp/repo"
     let worktree = makeWorktree(id: "/tmp/repo/main", name: "main", repoRoot: repoRoot)
