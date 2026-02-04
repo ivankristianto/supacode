@@ -58,7 +58,7 @@ struct AppFeatureDefaultEditorTests {
     )
     var repositoriesState = RepositoriesFeature.State()
     repositoriesState.repositories = [repository]
-    repositoriesState.selectedWorktreeID = worktree.id
+    repositoriesState.selection = .worktree(worktree.id)
     return repositoriesState
   }
 }

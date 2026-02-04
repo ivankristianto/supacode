@@ -91,6 +91,41 @@ struct RepositoriesFeatureTests {
     }
   }
 
+  @Test func requestArchiveWorktreeMergedArchivesImmediately() async {
+    let repoRoot = "/tmp/repo"
+    let mainWorktree = makeWorktree(id: repoRoot, name: "main", repoRoot: repoRoot)
+    let featureWorktree = makeWorktree(
+      id: "\(repoRoot)/feature",
+      name: "feature",
+      repoRoot: repoRoot
+    )
+    let repository = makeRepository(id: repoRoot, worktrees: [mainWorktree, featureWorktree])
+    var state = makeState(repositories: [repository])
+    state.selection = .worktree(featureWorktree.id)
+    state.pinnedWorktreeIDs = [featureWorktree.id]
+    state.worktreeOrderByRepository[repoRoot] = [featureWorktree.id]
+    state.worktreeInfoByID = [
+      featureWorktree.id: WorktreeInfoEntry(
+        addedLines: nil,
+        removedLines: nil,
+        pullRequest: makePullRequest(state: "MERGED")
+      ),
+    ]
+    let store = TestStore(initialState: state) {
+      RepositoriesFeature()
+    }
+
+    await store.send(.requestArchiveWorktree(featureWorktree.id, repository.id))
+    await store.receive(\.archiveWorktreeConfirmed) {
+      $0.archivedWorktreeIDs = [featureWorktree.id]
+      $0.pinnedWorktreeIDs = []
+      $0.worktreeOrderByRepository = [:]
+      $0.selection = .worktree(mainWorktree.id)
+    }
+    await store.receive(\.delegate.repositoriesChanged)
+    await store.receive(\.delegate.selectedWorktreeChanged)
+  }
+
   @Test func requestRenameBranchWithEmptyNameShowsAlert() async {
     let worktree = makeWorktree(id: "/tmp/wt", name: "eagle")
     let repository = makeRepository(id: "/tmp/repo", worktrees: [worktree])
@@ -109,6 +144,28 @@ struct RepositoriesFeatureTests {
     }
 
     await store.send(.requestRenameBranch(worktree.id, " ")) {
+      $0.alert = expectedAlert
+    }
+  }
+
+  @Test func requestRenameBranchWithWhitespaceShowsAlert() async {
+    let worktree = makeWorktree(id: "/tmp/wt", name: "eagle")
+    let repository = makeRepository(id: "/tmp/repo", worktrees: [worktree])
+    let store = TestStore(initialState: makeState(repositories: [repository])) {
+      RepositoriesFeature()
+    }
+
+    let expectedAlert = AlertState<RepositoriesFeature.Alert> {
+      TextState("Branch name invalid")
+    } actions: {
+      ButtonState(role: .cancel) {
+        TextState("OK")
+      }
+    } message: {
+      TextState("Branch names can't contain spaces.")
+    }
+
+    await store.send(.requestRenameBranch(worktree.id, "feature branch")) {
       $0.alert = expectedAlert
     }
   }
@@ -510,6 +567,71 @@ struct RepositoriesFeatureTests {
     }
   }
 
+  @Test func worktreePullRequestLoadedAutoArchivesWhenEnabled() async {
+    let repoRoot = "/tmp/repo"
+    let mainWorktree = makeWorktree(id: repoRoot, name: "main", repoRoot: repoRoot)
+    let featureWorktree = makeWorktree(
+      id: "\(repoRoot)/feature",
+      name: "feature",
+      repoRoot: repoRoot
+    )
+    let repository = makeRepository(id: repoRoot, worktrees: [mainWorktree, featureWorktree])
+    var state = makeState(repositories: [repository])
+    state.automaticallyArchiveMergedWorktrees = true
+    let store = TestStore(initialState: state) {
+      RepositoriesFeature()
+    }
+    let mergedPullRequest = makePullRequest(state: "MERGED", headRefName: featureWorktree.name)
+
+    await store.send(
+      .worktreePullRequestLoaded(worktreeID: featureWorktree.id, pullRequest: mergedPullRequest)
+    ) {
+      $0.worktreeInfoByID[featureWorktree.id] = WorktreeInfoEntry(
+        addedLines: nil,
+        removedLines: nil,
+        pullRequest: mergedPullRequest
+      )
+    }
+    await store.receive(\.archiveWorktreeConfirmed) {
+      $0.archivedWorktreeIDs = [featureWorktree.id]
+    }
+    await store.receive(\.delegate.repositoriesChanged)
+  }
+
+  @Test func worktreePullRequestLoadedSkipsAutoArchiveForMainWorktree() async {
+    let repoRoot = "/tmp/repo"
+    let mainWorktree = makeWorktree(id: repoRoot, name: "main", repoRoot: repoRoot)
+    let repository = makeRepository(id: repoRoot, worktrees: [mainWorktree])
+    var state = makeState(repositories: [repository])
+    state.automaticallyArchiveMergedWorktrees = true
+    let store = TestStore(initialState: state) {
+      RepositoriesFeature()
+    }
+    let mergedPullRequest = makePullRequest(state: "MERGED", headRefName: mainWorktree.name)
+
+    await store.send(
+      .worktreePullRequestLoaded(worktreeID: mainWorktree.id, pullRequest: mergedPullRequest)
+    ) {
+      $0.worktreeInfoByID[mainWorktree.id] = WorktreeInfoEntry(
+        addedLines: nil,
+        removedLines: nil,
+        pullRequest: mergedPullRequest
+      )
+    }
+    await store.finish()
+  }
+
+  @Test func unarchiveWorktreeNoopsWhenNotArchived() async {
+    let worktree = makeWorktree(id: "/tmp/wt", name: "owl")
+    let repository = makeRepository(id: "/tmp/repo", worktrees: [worktree])
+    let store = TestStore(initialState: makeState(repositories: [repository])) {
+      RepositoriesFeature()
+    }
+
+    await store.send(.unarchiveWorktree(worktree.id))
+    expectNoDifference(store.state.archivedWorktreeIDs, [])
+  }
+
   private func makeWorktree(id: String, name: String, repoRoot: String = "/tmp/repo") -> Worktree {
     Worktree(
       id: id,
@@ -517,6 +639,22 @@ struct RepositoriesFeatureTests {
       detail: "detail",
       workingDirectory: URL(fileURLWithPath: id),
       repositoryRootURL: URL(fileURLWithPath: repoRoot)
+    )
+  }
+
+  private func makePullRequest(state: String, headRefName: String? = nil) -> GithubPullRequest {
+    GithubPullRequest(
+      number: 1,
+      title: "PR",
+      state: state,
+      additions: 0,
+      deletions: 0,
+      isDraft: false,
+      reviewDecision: nil,
+      updatedAt: nil,
+      url: "https://example.com/pull/1",
+      headRefName: headRefName,
+      statusCheckRollup: nil
     )
   }
 
