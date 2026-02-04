@@ -68,7 +68,8 @@ struct ContentView: View {
     .focusedSceneValue(\.toggleLeftSidebarAction, toggleLeftSidebar)
     .overlay {
       CommandPaletteOverlayView(
-        store: store.scope(state: \.commandPalette, action: \.commandPalette)
+        store: store.scope(state: \.commandPalette, action: \.commandPalette),
+        items: store.commandPaletteItems
       )
     }
     .background(WindowTabbingDisabler())

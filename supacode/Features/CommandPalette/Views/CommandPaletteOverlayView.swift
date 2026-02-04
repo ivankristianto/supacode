@@ -3,10 +3,12 @@ import SwiftUI
 
 struct CommandPaletteOverlayView: View {
   @Bindable var store: StoreOf<CommandPaletteFeature>
+  let items: [CommandPaletteItem]
   @FocusState private var isQueryFocused: Bool
   @State private var hoveredID: CommandPaletteItem.ID?
 
   var body: some View {
+    let filteredItems = CommandPaletteFeature.filterItems(items: items, query: store.query)
     ZStack {
       if store.isPresented {
         ZStack {
@@ -23,7 +25,7 @@ struct CommandPaletteOverlayView: View {
               CommandPaletteCard(
                 query: $store.query,
                 selectedIndex: $store.selectedIndex,
-                items: store.filteredItems,
+                items: filteredItems,
                 hoveredID: $hoveredID,
                 isQueryFocused: _isQueryFocused,
                 onEvent: { event in
@@ -31,23 +33,16 @@ struct CommandPaletteOverlayView: View {
                   case .exit:
                     store.send(.setPresented(false))
                   case .submit:
-                    store.send(.submitSelected)
+                    submitSelected(rows: filteredItems)
                   case .move(let direction):
-                    switch direction {
-                    case .up:
-                      store.send(.moveSelection(.up))
-                    case .down:
-                      store.send(.moveSelection(.down))
-                    default:
-                      break
-                    }
+                    moveSelection(direction, rows: filteredItems)
                   }
                 },
                 activateShortcut: { index in
-                  store.send(.activateShortcut(index))
+                  activateShortcut(index, rows: filteredItems)
                 },
                 activate: { id in
-                  store.send(.activateItem(id))
+                  activate(id, rows: filteredItems)
                 }
               )
               .zIndex(1)
@@ -69,6 +64,84 @@ struct CommandPaletteOverlayView: View {
         hoveredID = nil
       }
     }
+    .onChange(of: filteredItems) { _, newValue in
+      updateSelection(rows: newValue)
+    }
+  }
+
+  private func updateSelection(rows: [CommandPaletteItem]) {
+    let trimmed = store.query.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty {
+      if store.selectedIndex != nil {
+        store.selectedIndex = nil
+      }
+      return
+    }
+    let count = rows.count
+    if count == 0 {
+      if store.selectedIndex != nil {
+        store.selectedIndex = nil
+      }
+      return
+    }
+    if let selectedIndex = store.selectedIndex, selectedIndex >= count {
+      store.selectedIndex = count - 1
+    } else if store.selectedIndex == nil {
+      store.selectedIndex = 0
+    }
+  }
+
+  private func moveSelection(_ direction: MoveCommandDirection, rows: [CommandPaletteItem]) {
+    let count = rows.count
+    guard count > 0 else {
+      store.selectedIndex = nil
+      return
+    }
+    let maxIndex = count - 1
+    switch direction {
+    case .up:
+      if let selectedIndex = store.selectedIndex {
+        store.selectedIndex = selectedIndex == 0 ? maxIndex : selectedIndex - 1
+      } else {
+        store.selectedIndex = maxIndex
+      }
+    case .down:
+      if let selectedIndex = store.selectedIndex {
+        store.selectedIndex = selectedIndex == maxIndex ? 0 : selectedIndex + 1
+      } else {
+        store.selectedIndex = 0
+      }
+    default:
+      break
+    }
+  }
+
+  private func submitSelected(rows: [CommandPaletteItem]) {
+    let trimmed = store.query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return }
+    guard let selectedIndex = store.selectedIndex else {
+      if let first = rows.first {
+        store.send(.activate(first.kind))
+      }
+      return
+    }
+    if rows.indices.contains(selectedIndex) {
+      store.send(.activate(rows[selectedIndex].kind))
+      return
+    }
+    if let last = rows.last {
+      store.send(.activate(last.kind))
+    }
+  }
+
+  private func activateShortcut(_ index: Int, rows: [CommandPaletteItem]) {
+    guard rows.indices.contains(index) else { return }
+    store.send(.activate(rows[index].kind))
+  }
+
+  private func activate(_ id: CommandPaletteItem.ID, rows: [CommandPaletteItem]) {
+    guard let item = rows.first(where: { $0.id == id }) else { return }
+    store.send(.activate(item.kind))
   }
 }
 
