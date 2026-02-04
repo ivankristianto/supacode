@@ -99,8 +99,6 @@ struct RepositorySectionView: View {
       .contentShape(.dragPreview, .rect)
       .environment(\.colorScheme, colorScheme)
       .preferredColorScheme(colorScheme)
-      .listRowInsets(EdgeInsets())
     }
-    .listSectionSeparator(.hidden)
   }
 }
