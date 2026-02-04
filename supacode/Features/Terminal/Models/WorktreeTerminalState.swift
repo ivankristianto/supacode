@@ -78,9 +78,25 @@ final class WorktreeTerminalState {
   }
 
   @discardableResult
-  func createTab(focusing: Bool = true, setupScript: String? = nil) -> TerminalTabID? {
+  func createTab(
+    focusing: Bool = true,
+    setupScript: String? = nil,
+    initialInput: String? = nil
+  ) -> TerminalTabID? {
     let title = "\(worktree.name) \(nextTabIndex())"
-    let resolvedInput = setupScriptInput(setupScript: setupScript)
+    let setupInput = setupScriptInput(setupScript: setupScript)
+    let commandInput = initialInput.flatMap { runScriptInput($0) }
+    let resolvedInput: String?
+    switch (setupInput, commandInput) {
+    case (nil, nil):
+      resolvedInput = nil
+    case (let setupInput?, nil):
+      resolvedInput = setupInput
+    case (nil, let commandInput?):
+      resolvedInput = commandInput
+    case (let setupInput?, let commandInput?):
+      resolvedInput = setupInput + commandInput
+    }
     let shouldConsumeSetupScript = pendingSetupScript && setupScript != nil
     if shouldConsumeSetupScript {
       pendingSetupScript = false

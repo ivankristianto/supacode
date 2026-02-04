@@ -80,6 +80,9 @@ struct WorktreeDetailView: View {
           onOpenWorktree: { action in
             store.send(.openWorktree(action))
           },
+          onOpenEditorInTerminal: {
+            store.send(.openEditorInTerminal)
+          },
           onOpenActionSelectionChanged: { action in
             store.send(.openActionSelectionChanged(action))
           },
@@ -179,6 +182,7 @@ struct WorktreeDetailView: View {
     let onRenameBranch: (String) -> Void
     let onArchiveWorktree: () -> Void
     let onOpenWorktree: (OpenWorktreeAction) -> Void
+    let onOpenEditorInTerminal: () -> Void
     let onOpenActionSelectionChanged: (OpenWorktreeAction) -> Void
     let onCopyPath: () -> Void
     let onRunScript: () -> Void
@@ -265,6 +269,10 @@ struct WorktreeDetailView: View {
           .buttonStyle(.plain)
           .help(openActionHelpText(for: action, isDefault: isDefault))
         }
+        Button("$EDITOR") {
+          onOpenEditorInTerminal()
+        }
+        .help("Open $EDITOR in a new tab")
         Divider()
         Button("Copy Path") {
           onCopyPath()
@@ -424,6 +432,7 @@ private struct WorktreeToolbarPreview: View {
         onRenameBranch: { _ in },
         onArchiveWorktree: {},
         onOpenWorktree: { _ in },
+        onOpenEditorInTerminal: {},
         onOpenActionSelectionChanged: { _ in },
         onCopyPath: {},
         onRunScript: {},
