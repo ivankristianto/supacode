@@ -47,7 +47,7 @@ struct RepositorySectionView: View {
           ProgressView()
             .controlSize(.small)
         }
-        if isHovering || isRemovingRepository {
+        if isHovering {
           Menu {
             Button("Repo Settings") {
               openRepoSettings()
@@ -78,6 +78,7 @@ struct RepositorySectionView: View {
           }
           .buttonStyle(.plain)
           .foregroundStyle(.secondary)
+          .padding(.trailing, 4)
           .help("New Worktree (\(AppShortcuts.newWorktree.display))")
           .disabled(isRemovingRepository)
         }
