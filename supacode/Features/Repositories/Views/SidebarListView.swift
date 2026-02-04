@@ -29,8 +29,6 @@ struct SidebarListView: View {
     let orderedRoots = state.orderedRepositoryRoots()
     let repositoriesByID = Dictionary(uniqueKeysWithValues: store.repositories.map { ($0.id, $0) })
     List(selection: selection) {
-      Label("Archived Worktrees", systemImage: "archivebox")
-        .tag(SidebarSelection.archivedWorktrees)
       if orderedRoots.isEmpty {
         ForEach(store.repositories) { repository in
           RepositorySectionView(

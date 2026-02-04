@@ -39,6 +39,13 @@ struct SidebarFooterView: View {
       }
       .labelStyle(.iconOnly)
       .help("Settings (\(AppShortcuts.openSettings.display))")
+      Button {
+        store.send(.selectArchivedWorktrees)
+      } label: {
+        Label("Archived Worktrees", systemImage: "archivebox")
+          .labelStyle(.iconOnly)
+      }
+      .help("Archived Worktrees")
     }
     .buttonStyle(.plain)
     .font(.callout)
