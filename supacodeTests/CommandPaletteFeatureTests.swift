@@ -1,11 +1,208 @@
 import ComposableArchitecture
 import CustomDump
+import Foundation
+import IdentifiedCollections
 import Testing
 
 @testable import supacode
 
 @MainActor
 struct CommandPaletteFeatureTests {
+  @Test func commandPaletteItems_onlyGlobalWhenEmpty() {
+    let items = CommandPaletteFeature.commandPaletteItems(from: RepositoriesFeature.State())
+    expectNoDifference(
+      items.map(\.id),
+      ["global.open-settings", "global.new-worktree"]
+    )
+  }
+
+  @Test func commandPaletteItems_skipsPendingAndDeletingWorktrees() {
+    let rootPath = "/tmp/repo"
+    let keep = makeWorktree(id: "\(rootPath)/wt-keep", name: "keep", repoRoot: rootPath)
+    let deleting = makeWorktree(
+      id: "\(rootPath)/wt-delete",
+      name: "delete",
+      repoRoot: rootPath
+    )
+    let repository = makeRepository(rootPath: rootPath, name: "Repo", worktrees: [keep, deleting])
+    var state = RepositoriesFeature.State(repositories: [repository])
+    state.deletingWorktreeIDs = [deleting.id]
+    state.pendingWorktrees = [
+      PendingWorktree(
+        id: "\(rootPath)/wt-pending",
+        repositoryID: repository.id,
+        name: "pending",
+        detail: "pending"
+      ),
+    ]
+
+    let items = CommandPaletteFeature.commandPaletteItems(from: state)
+    let ids = items.map(\.id)
+    #expect(ids.contains("worktree.\(keep.id).select"))
+    #expect(ids.contains("worktree.\(keep.id).run"))
+    #expect(ids.contains("worktree.\(keep.id).editor"))
+    #expect(ids.contains("worktree.\(keep.id).remove"))
+    #expect(ids.contains { $0.contains(deleting.id) } == false)
+    #expect(ids.contains { $0.contains("wt-pending") } == false)
+  }
+
+  @Test func commandPaletteItems_omitsRemoveForMainWorktree() {
+    let rootPath = "/tmp/repo"
+    let main = makeWorktree(
+      id: rootPath,
+      name: "repo",
+      detail: "main",
+      repoRoot: rootPath,
+      workingDirectory: rootPath
+    )
+    let repository = makeRepository(rootPath: rootPath, name: "Repo", worktrees: [main])
+    let items = CommandPaletteFeature.commandPaletteItems(
+      from: RepositoriesFeature.State(repositories: [repository])
+    )
+
+    #expect(
+      items.contains {
+        if case .removeWorktree = $0.kind {
+          return true
+        }
+        return false
+      } == false
+    )
+    #expect(
+      items.filter {
+        if case .worktreeSelect = $0.kind {
+          return true
+        }
+        return false
+      }.count == 1
+    )
+  }
+
+  @Test func commandPaletteItems_includesRemoveForNonMainWorktree() {
+    let rootPath = "/tmp/repo"
+    let main = makeWorktree(
+      id: rootPath,
+      name: "repo",
+      detail: "main",
+      repoRoot: rootPath,
+      workingDirectory: rootPath
+    )
+    let feature = makeWorktree(
+      id: "\(rootPath)/wt-feature",
+      name: "feature",
+      detail: "feature",
+      repoRoot: rootPath
+    )
+    let repository = makeRepository(rootPath: rootPath, name: "Repo", worktrees: [main, feature])
+    let items = CommandPaletteFeature.commandPaletteItems(
+      from: RepositoriesFeature.State(repositories: [repository])
+    )
+
+    #expect(
+      items.contains {
+        if case .removeWorktree(let worktreeID, let repositoryID) = $0.kind {
+          return worktreeID == feature.id && repositoryID == repository.id
+        }
+        return false
+      }
+    )
+  }
+
+  @Test func commandPaletteItems_trimsDetailToNil() {
+    let rootPath = "/tmp/repo"
+    let worktree = makeWorktree(
+      id: "\(rootPath)/wt-detail",
+      name: "detail",
+      detail: "   ",
+      repoRoot: rootPath
+    )
+    let repository = makeRepository(rootPath: rootPath, name: "Repo", worktrees: [worktree])
+    let items = CommandPaletteFeature.commandPaletteItems(
+      from: RepositoriesFeature.State(repositories: [repository])
+    )
+    let selectItem = items.first {
+      if case .worktreeSelect(let id) = $0.kind {
+        return id == worktree.id
+      }
+      return false
+    }
+    #expect(selectItem?.subtitle == nil)
+  }
+
+  @Test func commandPaletteItems_respectsRowOrderWithinRepository() {
+    let rootPath = "/tmp/repo"
+    let main = makeWorktree(
+      id: rootPath,
+      name: "repo",
+      detail: "main",
+      repoRoot: rootPath,
+      workingDirectory: rootPath
+    )
+    let pinned = makeWorktree(
+      id: "\(rootPath)/wt-pinned",
+      name: "pinned",
+      detail: "pinned",
+      repoRoot: rootPath
+    )
+    let unpinned = makeWorktree(
+      id: "\(rootPath)/wt-unpinned",
+      name: "unpinned",
+      detail: "unpinned",
+      repoRoot: rootPath
+    )
+    let repository = makeRepository(
+      rootPath: rootPath, name: "Repo",
+      worktrees: [
+        main,
+        pinned,
+        unpinned,
+      ])
+    var state = RepositoriesFeature.State(repositories: [repository])
+    state.pinnedWorktreeIDs = [pinned.id]
+    state.worktreeOrderByRepository = [repository.id: [unpinned.id]]
+
+    let items = CommandPaletteFeature.commandPaletteItems(from: state)
+    let selectIDs = items.compactMap { item in
+      if case .worktreeSelect(let id) = item.kind {
+        return id
+      }
+      return nil
+    }
+    expectNoDifference(selectIDs, [main.id, pinned.id, unpinned.id])
+  }
+
+  @Test func commandPaletteItems_respectsRepositoryOrder() {
+    let repoAPath = "/tmp/repo-a"
+    let repoBPath = "/tmp/repo-b"
+    let mainA = makeWorktree(
+      id: repoAPath,
+      name: "repo-a",
+      detail: "main",
+      repoRoot: repoAPath,
+      workingDirectory: repoAPath
+    )
+    let mainB = makeWorktree(
+      id: repoBPath,
+      name: "repo-b",
+      detail: "main",
+      repoRoot: repoBPath,
+      workingDirectory: repoBPath
+    )
+    let repoA = makeRepository(rootPath: repoAPath, name: "Repo A", worktrees: [mainA])
+    let repoB = makeRepository(rootPath: repoBPath, name: "Repo B", worktrees: [mainB])
+    var state = RepositoriesFeature.State(repositories: [repoA, repoB])
+    state.repositoryRoots = [repoB.rootURL, repoA.rootURL]
+
+    let items = CommandPaletteFeature.commandPaletteItems(from: state)
+    let selectIDs = items.compactMap { item in
+      if case .worktreeSelect(let id) = item.kind {
+        return id
+      }
+      return nil
+    }
+    expectNoDifference(selectIDs, [mainB.id, mainA.id])
+  }
+
   @Test func showsGlobalItemsWhenQueryEmpty() {
     let openSettings = CommandPaletteItem(
       id: "global.open-settings",
@@ -103,4 +300,34 @@ struct CommandPaletteFeatureTests {
     }
     await store.receive(.delegate(.runWorktree("wt-bear")))
   }
+}
+
+private func makeWorktree(
+  id: String,
+  name: String,
+  detail: String = "detail",
+  repoRoot: String,
+  workingDirectory: String? = nil
+) -> Worktree {
+  Worktree(
+    id: id,
+    name: name,
+    detail: detail,
+    workingDirectory: URL(fileURLWithPath: workingDirectory ?? id),
+    repositoryRootURL: URL(fileURLWithPath: repoRoot)
+  )
+}
+
+private func makeRepository(
+  rootPath: String,
+  name: String,
+  worktrees: [Worktree]
+) -> Repository {
+  let rootURL = URL(fileURLWithPath: rootPath)
+  return Repository(
+    id: rootURL.path(percentEncoded: false),
+    rootURL: rootURL,
+    name: name,
+    worktrees: IdentifiedArray(uniqueElements: worktrees)
+  )
 }
