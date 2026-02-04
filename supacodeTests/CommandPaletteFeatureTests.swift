@@ -148,7 +148,7 @@ struct CommandPaletteFeatureTests {
     #expect(selectItem?.subtitle == nil)
   }
 
-  @Test func commandPaletteItems_stripsPathFromWorktreeName() {
+  @Test func commandPaletteItems_keepsFullWorktreeName() {
     let rootPath = "/tmp/repo"
     let worktree = makeWorktree(
       id: "\(rootPath)/wt-path",
@@ -166,7 +166,7 @@ struct CommandPaletteFeatureTests {
       }
       return false
     }
-    #expect(selectItem?.title == "Repo / cache")
+    #expect(selectItem?.title == "Repo / khoi/cache")
   }
 
   @Test func commandPaletteItems_respectsRowOrderWithinRepository() {
