@@ -66,6 +66,9 @@ struct CommandPaletteOverlayView: View {
         hoveredID = nil
       }
     }
+    .onChange(of: store.query) { _, _ in
+      resetSelection(rows: filteredItems)
+    }
     .onChange(of: filteredItems) { _, newValue in
       updateSelection(rows: newValue)
     }
@@ -82,6 +85,18 @@ struct CommandPaletteOverlayView: View {
     if let selectedIndex = store.selectedIndex, selectedIndex >= count {
       store.selectedIndex = count - 1
     } else if store.selectedIndex == nil {
+      store.selectedIndex = 0
+    }
+  }
+
+  private func resetSelection(rows: [CommandPaletteItem]) {
+    if rows.isEmpty {
+      if store.selectedIndex != nil {
+        store.selectedIndex = nil
+      }
+      return
+    }
+    if store.selectedIndex != 0 {
       store.selectedIndex = 0
     }
   }
@@ -303,8 +318,8 @@ private struct CommandPaletteList: View {
           .padding(10)
         }
         .frame(maxHeight: 200)
-        .onChange(of: selectedIndex) { _ in
-          guard let selectedIndex, rows.indices.contains(selectedIndex) else { return }
+        .onChange(of: selectedIndex) { _, newValue in
+          guard let selectedIndex = newValue, rows.indices.contains(selectedIndex) else { return }
           proxy.scrollTo(rows[selectedIndex].id)
         }
       }
@@ -393,6 +408,7 @@ private struct CommandPaletteRowView: View {
           Image(systemName: leadingIcon)
             .foregroundStyle(emphasis ? .primary : .secondary)
             .font(.system(size: 14, weight: .medium))
+            .frame(width: 16, height: 16, alignment: .center)
         }
 
         VStack(alignment: .leading, spacing: 2) {
