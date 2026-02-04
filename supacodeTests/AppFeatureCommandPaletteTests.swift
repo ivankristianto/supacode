@@ -49,6 +49,36 @@ struct AppFeatureCommandPaletteTests {
     }
   }
 
+  @Test(.dependencies) func openRepositoryShowsOpenPanel() async {
+    let store = TestStore(initialState: AppFeature.State()) {
+      AppFeature()
+    }
+
+    await store.send(.commandPalette(.delegate(.openRepository)))
+    await store.receive(\.repositories.setOpenPanelPresented) {
+      $0.repositories.isOpenPanelPresented = true
+    }
+  }
+
+  @Test(.dependencies) func refreshWorktreesDispatchesRefresh() async {
+    let store = TestStore(initialState: AppFeature.State()) {
+      AppFeature()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.commandPalette(.delegate(.refreshWorktrees)))
+    await store.receive(\.repositories.refreshWorktrees)
+  }
+
+  @Test(.dependencies) func checkForUpdatesDispatchesUpdateAction() async {
+    let store = TestStore(initialState: AppFeature.State()) {
+      AppFeature()
+    }
+
+    await store.send(.commandPalette(.delegate(.checkForUpdates)))
+    await store.receive(\.updates.checkForUpdates)
+  }
+
   @Test(.dependencies) func removeWorktreeDispatchesRequest() async {
     let worktree = makeWorktree(
       id: "/tmp/repo-run/wt-1",
@@ -123,105 +153,6 @@ struct AppFeatureCommandPaletteTests {
     }
   }
 
-  @Test(.dependencies) func runWorktreeUsesRepositoryRunScript() async {
-    let worktree = makeWorktree(
-      id: "/tmp/repo-run/wt-1",
-      name: "wt-1",
-      repoRoot: "/tmp/repo-run"
-    )
-    let repository = makeRepository(id: "/tmp/repo-run", worktrees: [worktree])
-    var repositoriesState = RepositoriesFeature.State()
-    repositoriesState.repositories = [repository]
-    let sent = LockIsolated<[TerminalClient.Command]>([])
-    let storage = SettingsFileStorage.inMemory()
-    let store = TestStore(
-      initialState: AppFeature.State(
-        repositories: repositoriesState,
-        settings: SettingsFeature.State()
-      )
-    ) {
-      AppFeature()
-    } withDependencies: {
-      $0.settingsFileStorage = storage
-      $0.terminalClient.send = { command in
-        sent.withValue { $0.append(command) }
-      }
-    }
-
-    withDependencies {
-      $0.settingsFileStorage = storage
-    } operation: {
-      @Shared(.repositorySettings(worktree.repositoryRootURL)) var repositorySettings
-      $repositorySettings.withLock {
-        $0.runScript = "make run"
-        $0.openActionID = "finder"
-      }
-    }
-
-    await store.send(.commandPalette(.delegate(.runWorktree(worktree.id))))
-    await store.receive(\.repositories.selectWorktree) {
-      $0.repositories.selection = .worktree(worktree.id)
-    }
-    await store.receive(\.repositories.delegate.selectedWorktreeChanged)
-    await store.receive(\.worktreeSettingsLoaded) {
-      $0.openActionSelection = .finder
-      $0.selectedRunScript = "make run"
-    }
-    await store.finish()
-    #expect(sent.value.contains(.runScript(worktree, script: "make run")))
-  }
-
-  @Test(.dependencies) func openWorktreeInEditorUsesResolver() async {
-    let worktree = makeWorktree(
-      id: "/tmp/repo-editor/wt-1",
-      name: "wt-1",
-      repoRoot: "/tmp/repo-editor"
-    )
-    let repository = makeRepository(id: "/tmp/repo-editor", worktrees: [worktree])
-    var repositoriesState = RepositoriesFeature.State()
-    repositoriesState.repositories = [repository]
-    let opened = LockIsolated<[(OpenWorktreeAction, Worktree)]>([])
-    let storage = SettingsFileStorage.inMemory()
-    var initialState = AppFeature.State(
-      repositories: repositoriesState,
-      settings: SettingsFeature.State()
-    )
-    initialState.openActionSelection = .terminal
-    initialState.selectedRunScript = "previous"
-    let store = TestStore(initialState: initialState) {
-      AppFeature()
-    } withDependencies: {
-      $0.settingsFileStorage = storage
-      $0.editorActionResolver.resolve = { .vscode }
-      $0.workspaceClient.open = { action, worktree, _ in
-        opened.withValue { $0.append((action, worktree)) }
-      }
-    }
-
-    withDependencies {
-      $0.settingsFileStorage = storage
-    } operation: {
-      @Shared(.repositorySettings(worktree.repositoryRootURL)) var repositorySettings
-      $repositorySettings.withLock {
-        $0.openActionID = "finder"
-        $0.runScript = ""
-      }
-    }
-
-    await store.send(.commandPalette(.delegate(.openWorktreeInEditor(worktree.id))))
-    await store.receive(\.repositories.selectWorktree) {
-      $0.repositories.selection = .worktree(worktree.id)
-    }
-    await store.receive(\.repositories.delegate.selectedWorktreeChanged)
-    await store.receive(\.worktreeSettingsLoaded) {
-      $0.openActionSelection = .finder
-      $0.selectedRunScript = ""
-    }
-    await store.finish()
-    #expect(opened.value.count == 1)
-    #expect(opened.value.first?.0 == .vscode)
-    #expect(opened.value.first?.1 == worktree)
-  }
 }
 
 private func makeWorktree(id: String, name: String, repoRoot: String = "/tmp/repo") -> Worktree {

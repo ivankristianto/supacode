@@ -498,6 +498,14 @@ struct AppFeature {
       case .commandPalette(.delegate(.selectWorktree(let worktreeID))):
         return .send(.repositories(.selectWorktree(worktreeID)))
 
+      case .commandPalette(.delegate(.showAbout)):
+        return .run { @MainActor _ in
+          NSApplication.shared.orderFrontStandardAboutPanel(nil)
+        }
+
+      case .commandPalette(.delegate(.checkForUpdates)):
+        return .send(.updates(.checkForUpdates))
+
       case .commandPalette(.delegate(.openSettings)):
         return .merge(
           .send(.settings(.setSelection(.general))),
@@ -509,55 +517,17 @@ struct AppFeature {
       case .commandPalette(.delegate(.newWorktree)):
         return .send(.repositories(.createRandomWorktree))
 
+      case .commandPalette(.delegate(.openRepository)):
+        return .send(.repositories(.setOpenPanelPresented(true)))
+
       case .commandPalette(.delegate(.removeWorktree(let worktreeID, let repositoryID))):
         return .send(.repositories(.requestDeleteWorktree(worktreeID, repositoryID)))
 
       case .commandPalette(.delegate(.archiveWorktree(let worktreeID, let repositoryID))):
         return .send(.repositories(.requestArchiveWorktree(worktreeID, repositoryID)))
 
-      case .commandPalette(.delegate(.runWorktree(let worktreeID))):
-        guard let worktree = state.repositories.worktree(for: worktreeID) else {
-          return .none
-        }
-        let rootURL = worktree.repositoryRootURL
-        @Shared(.repositorySettings(rootURL)) var repositorySettings
-        let script = repositorySettings.runScript
-        let trimmed = script.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-          state.alert = AlertState {
-            TextState("No Run Script Configured")
-          } actions: {
-            ButtonState(role: .cancel, action: .dismiss) {
-              TextState("OK")
-            }
-          } message: {
-            TextState("Configure a run script in Repository Settings.")
-          }
-          return .none
-        }
-        analyticsClient.capture("script_run", nil)
-        return .merge(
-          .send(.repositories(.selectWorktree(worktreeID))),
-          .run { _ in
-            await terminalClient.send(.runScript(worktree, script: script))
-          }
-        )
-
-      case .commandPalette(.delegate(.openWorktreeInEditor(let worktreeID))):
-        guard let worktree = state.repositories.worktree(for: worktreeID) else {
-          return .none
-        }
-        let editorActionResolver = editorActionResolver
-        let workspaceClient = workspaceClient
-        return .merge(
-          .send(.repositories(.selectWorktree(worktreeID))),
-          .run { send in
-            let action = await editorActionResolver.resolve()
-            await workspaceClient.open(action, worktree) { error in
-              send(.openWorktreeFailed(error))
-            }
-          }
-        )
+      case .commandPalette(.delegate(.refreshWorktrees)):
+        return .send(.repositories(.refreshWorktrees))
 
       case .commandPalette:
         return .none

@@ -5,20 +5,22 @@ struct CommandPaletteItem: Identifiable, Equatable {
   let kind: Kind
 
   enum Kind: Equatable {
+    case about
+    case checkForUpdates
+    case openRepository
     case worktreeSelect(Worktree.ID)
     case openSettings
     case newWorktree
     case removeWorktree(Worktree.ID, Repository.ID)
     case archiveWorktree(Worktree.ID, Repository.ID)
-    case runWorktree(Worktree.ID)
-    case openWorktreeInEditor(Worktree.ID)
+    case refreshWorktrees
   }
 
   var isGlobal: Bool {
     switch kind {
-    case .openSettings, .newWorktree:
+    case .about, .checkForUpdates, .openRepository, .openSettings, .newWorktree, .refreshWorktrees:
       return true
-    case .worktreeSelect, .removeWorktree, .archiveWorktree, .runWorktree, .openWorktreeInEditor:
+    case .worktreeSelect, .removeWorktree, .archiveWorktree:
       return false
     }
   }

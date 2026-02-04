@@ -21,12 +21,14 @@ struct CommandPaletteFeature {
   @CasePathable
   enum Delegate: Equatable {
     case selectWorktree(Worktree.ID)
+    case showAbout
+    case checkForUpdates
     case openSettings
     case newWorktree
+    case openRepository
     case removeWorktree(Worktree.ID, Repository.ID)
     case archiveWorktree(Worktree.ID, Repository.ID)
-    case runWorktree(Worktree.ID)
-    case openWorktreeInEditor(Worktree.ID)
+    case refreshWorktrees
   }
 
   var body: some Reducer<State, Action> {
@@ -89,16 +91,40 @@ struct CommandPaletteFeature {
   ) -> [CommandPaletteItem] {
     var items: [CommandPaletteItem] = [
       CommandPaletteItem(
+        id: "global.about",
+        title: "About Supacode",
+        subtitle: nil,
+        kind: .about
+      ),
+      CommandPaletteItem(
+        id: "global.check-for-updates",
+        title: "Check for Updates",
+        subtitle: nil,
+        kind: .checkForUpdates
+      ),
+      CommandPaletteItem(
         id: "global.open-settings",
         title: "Open Settings",
         subtitle: nil,
         kind: .openSettings
       ),
       CommandPaletteItem(
+        id: "global.open-repository",
+        title: "Open Repository",
+        subtitle: nil,
+        kind: .openRepository
+      ),
+      CommandPaletteItem(
         id: "global.new-worktree",
         title: "New Worktree",
         subtitle: nil,
         kind: .newWorktree
+      ),
+      CommandPaletteItem(
+        id: "global.refresh-worktrees",
+        title: "Refresh Worktrees",
+        subtitle: nil,
+        kind: .refreshWorktrees
       ),
     ]
     for row in repositories.orderedWorktreeRows() {
@@ -113,22 +139,6 @@ struct CommandPaletteFeature {
           title: title,
           subtitle: detail,
           kind: .worktreeSelect(row.id)
-        )
-      )
-      items.append(
-        CommandPaletteItem(
-          id: "worktree.\(row.id).run",
-          title: title,
-          subtitle: detail,
-          kind: .runWorktree(row.id)
-        )
-      )
-      items.append(
-        CommandPaletteItem(
-          id: "worktree.\(row.id).editor",
-          title: title,
-          subtitle: detail,
-          kind: .openWorktreeInEditor(row.id)
         )
       )
       if row.isRemovable, !row.isMainWorktree {
@@ -158,18 +168,22 @@ private func delegateAction(for kind: CommandPaletteItem.Kind) -> CommandPalette
   switch kind {
   case .worktreeSelect(let id):
     return .selectWorktree(id)
+  case .about:
+    return .showAbout
+  case .checkForUpdates:
+    return .checkForUpdates
   case .openSettings:
     return .openSettings
   case .newWorktree:
     return .newWorktree
+  case .openRepository:
+    return .openRepository
   case .removeWorktree(let worktreeID, let repositoryID):
     return .removeWorktree(worktreeID, repositoryID)
   case .archiveWorktree(let worktreeID, let repositoryID):
     return .archiveWorktree(worktreeID, repositoryID)
-  case .runWorktree(let worktreeID):
-    return .runWorktree(worktreeID)
-  case .openWorktreeInEditor(let worktreeID):
-    return .openWorktreeInEditor(worktreeID)
+  case .refreshWorktrees:
+    return .refreshWorktrees
   }
 }
 

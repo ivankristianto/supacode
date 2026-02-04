@@ -12,7 +12,14 @@ struct CommandPaletteFeatureTests {
     let items = CommandPaletteFeature.commandPaletteItems(from: RepositoriesFeature.State())
     expectNoDifference(
       items.map(\.id),
-      ["global.open-settings", "global.new-worktree"]
+      [
+        "global.about",
+        "global.check-for-updates",
+        "global.open-settings",
+        "global.open-repository",
+        "global.new-worktree",
+        "global.refresh-worktrees",
+      ]
     )
   }
 
@@ -39,8 +46,6 @@ struct CommandPaletteFeatureTests {
     let items = CommandPaletteFeature.commandPaletteItems(from: state)
     let ids = items.map(\.id)
     #expect(ids.contains("worktree.\(keep.id).select"))
-    #expect(ids.contains("worktree.\(keep.id).run"))
-    #expect(ids.contains("worktree.\(keep.id).editor"))
     #expect(ids.contains("worktree.\(keep.id).archive"))
     #expect(ids.contains("worktree.\(keep.id).remove"))
     #expect(ids.contains { $0.contains(deleting.id) } == false)
@@ -239,18 +244,6 @@ struct CommandPaletteFeatureTests {
       subtitle: "main",
       kind: .worktreeSelect("wt-fox")
     )
-    let runFox = CommandPaletteItem(
-      id: "worktree.fox.run",
-      title: "Repo / fox",
-      subtitle: "Run - main",
-      kind: .runWorktree("wt-fox")
-    )
-    let editorFox = CommandPaletteItem(
-      id: "worktree.fox.editor",
-      title: "Repo / fox",
-      subtitle: "Open in Editor - main",
-      kind: .openWorktreeInEditor("wt-fox")
-    )
     let archiveFox = CommandPaletteItem(
       id: "worktree.fox.archive",
       title: "Repo / fox",
@@ -266,7 +259,7 @@ struct CommandPaletteFeatureTests {
 
     expectNoDifference(
       CommandPaletteFeature.filterItems(
-        items: [openSettings, newWorktree, selectFox, runFox, editorFox, archiveFox, removeFox],
+        items: [openSettings, newWorktree, selectFox, archiveFox, removeFox],
         query: ""
       ),
       [openSettings, newWorktree]
@@ -364,12 +357,12 @@ struct CommandPaletteFeatureTests {
       CommandPaletteFeature()
     }
 
-    await store.send(.activate(.runWorktree("wt-bear"))) {
+    await store.send(.activate(.openRepository)) {
       $0.isPresented = false
       $0.query = ""
       $0.selectedIndex = nil
     }
-    await store.receive(.delegate(.runWorktree("wt-bear")))
+    await store.receive(.delegate(.openRepository))
   }
 }
 

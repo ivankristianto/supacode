@@ -334,12 +334,9 @@ private struct CommandPaletteRowView: View {
 
   private var badge: String? {
     switch row.kind {
-    case .openSettings, .newWorktree, .worktreeSelect:
+    case .about, .checkForUpdates, .openRepository, .openSettings, .newWorktree, .refreshWorktrees,
+      .worktreeSelect:
       return nil
-    case .runWorktree:
-      return "Run"
-    case .openWorktreeInEditor:
-      return "Editor"
     case .removeWorktree:
       return "Remove"
     case .archiveWorktree:
@@ -349,16 +346,20 @@ private struct CommandPaletteRowView: View {
 
   private var leadingIcon: String? {
     switch row.kind {
+    case .about:
+      return "info.circle"
+    case .checkForUpdates:
+      return "arrow.down.circle"
+    case .openRepository:
+      return "folder"
     case .openSettings:
       return "gearshape"
     case .newWorktree:
       return "plus"
+    case .refreshWorktrees:
+      return "arrow.clockwise"
     case .worktreeSelect:
       return nil
-    case .runWorktree:
-      return "play.fill"
-    case .openWorktreeInEditor:
-      return "pencil"
     case .removeWorktree:
       return "trash"
     case .archiveWorktree:
@@ -368,20 +369,26 @@ private struct CommandPaletteRowView: View {
 
   private var emphasis: Bool {
     switch row.kind {
-    case .openSettings, .newWorktree:
+    case .about, .checkForUpdates, .openRepository, .openSettings, .newWorktree, .refreshWorktrees:
       return true
-    case .worktreeSelect, .runWorktree, .openWorktreeInEditor, .removeWorktree, .archiveWorktree:
+    case .worktreeSelect, .removeWorktree, .archiveWorktree:
       return false
     }
   }
 
   private var explicitShortcutSymbols: [String]? {
     switch row.kind {
+    case .checkForUpdates:
+      return AppShortcuts.checkForUpdates.displaySymbols
     case .openSettings:
       return AppShortcuts.openSettings.displaySymbols
+    case .openRepository:
+      return AppShortcuts.openRepository.displaySymbols
     case .newWorktree:
       return AppShortcuts.newWorktree.displaySymbols
-    case .worktreeSelect, .runWorktree, .openWorktreeInEditor, .removeWorktree, .archiveWorktree:
+    case .refreshWorktrees:
+      return AppShortcuts.refreshWorktrees.displaySymbols
+    case .about, .worktreeSelect, .removeWorktree, .archiveWorktree:
       return nil
     }
   }
@@ -456,18 +463,22 @@ private struct CommandPaletteRowView: View {
     switch row.kind {
     case .worktreeSelect:
       base = "Switch to \(row.title)"
+    case .about:
+      base = "Show About Supacode"
+    case .checkForUpdates:
+      base = "Check for Updates"
+    case .openRepository:
+      base = "Open Repository"
     case .openSettings:
       base = "Open Settings"
     case .newWorktree:
       base = "New Worktree"
+    case .refreshWorktrees:
+      base = "Refresh Worktrees"
     case .removeWorktree:
       base = "Remove \(row.title)"
     case .archiveWorktree:
       base = "Archive \(row.title)"
-    case .runWorktree:
-      base = "Run \(row.title)"
-    case .openWorktreeInEditor:
-      base = "Open \(row.title) in Editor"
     }
     if let explicitShortcutLabel {
       return "\(base) (\(explicitShortcutLabel))"
@@ -480,11 +491,17 @@ private struct CommandPaletteRowView: View {
 
   private var explicitShortcutLabel: String? {
     switch row.kind {
+    case .checkForUpdates:
+      return AppShortcuts.checkForUpdates.display
     case .openSettings:
       return AppShortcuts.openSettings.display
+    case .openRepository:
+      return AppShortcuts.openRepository.display
     case .newWorktree:
       return AppShortcuts.newWorktree.display
-    case .worktreeSelect, .runWorktree, .openWorktreeInEditor, .removeWorktree, .archiveWorktree:
+    case .refreshWorktrees:
+      return AppShortcuts.refreshWorktrees.display
+    case .about, .worktreeSelect, .removeWorktree, .archiveWorktree:
       return nil
     }
   }
