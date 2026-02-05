@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import Sharing
 
 @Reducer
 struct CommandPaletteFeature {
@@ -24,7 +25,6 @@ struct CommandPaletteFeature {
     case updateSelection(itemsCount: Int)
     case resetSelection(itemsCount: Int)
     case moveSelection(SelectionMove, itemsCount: Int)
-    case recencyLoaded([CommandPaletteItem.ID: TimeInterval])
     case pruneRecency([CommandPaletteItem.ID])
     case delegate(Delegate)
   }
@@ -41,7 +41,6 @@ struct CommandPaletteFeature {
     case refreshWorktrees
   }
 
-  @Dependency(\.commandPaletteRecency) private var commandPaletteRecency
   @Dependency(\.date.now) private var now
 
   var body: some Reducer<State, Action> {
@@ -54,6 +53,7 @@ struct CommandPaletteFeature {
       case .setPresented(let isPresented):
         state.isPresented = isPresented
         if isPresented {
+          loadRecency(into: &state)
           state.selectedIndex = nil
         } else {
           state.query = ""
@@ -64,6 +64,7 @@ struct CommandPaletteFeature {
       case .togglePresented:
         state.isPresented.toggle()
         if state.isPresented {
+          loadRecency(into: &state)
           state.selectedIndex = nil
         } else {
           state.query = ""
@@ -76,13 +77,8 @@ struct CommandPaletteFeature {
         state.query = ""
         state.selectedIndex = nil
         state.recencyByItemID[item.id] = now.timeIntervalSince1970
-        let recencyByItemID = state.recencyByItemID
-        return .merge(
-          .run { _ in
-            await commandPaletteRecency.save(recencyByItemID)
-          },
-          .send(.delegate(delegateAction(for: item.kind)))
-        )
+        saveRecency(state.recencyByItemID)
+        return .send(.delegate(delegateAction(for: item.kind)))
 
       case .updateSelection(let itemsCount):
         if itemsCount == 0 {
@@ -122,18 +118,13 @@ struct CommandPaletteFeature {
         }
         return .none
 
-      case .recencyLoaded(let recency):
-        state.recencyByItemID = recency
-        return .none
-
       case .pruneRecency(let ids):
         let idSet = Set(ids)
         let pruned = state.recencyByItemID.filter { idSet.contains($0.key) }
         guard pruned != state.recencyByItemID else { return .none }
         state.recencyByItemID = pruned
-        return .run { _ in
-          await commandPaletteRecency.save(pruned)
-        }
+        saveRecency(pruned)
+        return .none
 
       case .delegate:
         return .none
@@ -225,6 +216,18 @@ private func delegateAction(for kind: CommandPaletteItem.Kind) -> CommandPalette
     return .archiveWorktree(worktreeID, repositoryID)
   case .refreshWorktrees:
     return .refreshWorktrees
+  }
+}
+
+private func loadRecency(into state: inout CommandPaletteFeature.State) {
+  @Shared(.appStorage("commandPaletteItemRecency")) var recency: [String: Double] = [:]
+  state.recencyByItemID = recency
+}
+
+private func saveRecency(_ recencyByItemID: [CommandPaletteItem.ID: TimeInterval]) {
+  @Shared(.appStorage("commandPaletteItemRecency")) var recency: [String: Double] = [:]
+  $recency.withLock {
+    $0 = recencyByItemID
   }
 }
 
