@@ -12,6 +12,10 @@ private let notificationSound: NSSound? = {
   return NSSound(contentsOf: url, byReference: true)
 }()
 
+private enum CancelID {
+  static let periodicRefresh = "app.periodicRefresh"
+}
+
 @Reducer
 struct AppFeature {
   @ObservableState
@@ -39,7 +43,7 @@ struct AppFeature {
   }
 
   enum Action {
-    case task
+    case appLaunched
     case scenePhaseChanged(ScenePhase)
     case repositories(RepositoriesFeature.Action)
     case settings(SettingsFeature.Action)
@@ -80,7 +84,7 @@ struct AppFeature {
   var body: some Reducer<State, Action> {
     let core = Reduce<State, Action> { state, action in
       switch action {
-      case .task:
+      case .appLaunched:
         return .merge(
           .send(.repositories(.task)),
           .send(.settings(.task)),
@@ -100,9 +104,21 @@ struct AppFeature {
         switch phase {
         case .active:
           analyticsClient.capture("app_activated", nil)
-          return .send(.repositories(.loadPersistedRepositories))
-        default:
-          return .none
+          return .merge(
+            .send(.repositories(.refreshWorktrees)),
+            .run { send in
+              while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { return }
+                await send(.repositories(.refreshWorktrees))
+              }
+            }
+            .cancellable(id: CancelID.periodicRefresh, cancelInFlight: true)
+          )
+        case .inactive, .background:
+          return .cancel(id: CancelID.periodicRefresh)
+        @unknown default:
+          return .cancel(id: CancelID.periodicRefresh)
         }
 
       case .repositories(.delegate(.selectedWorktreeChanged(let worktree))):

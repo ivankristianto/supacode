@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RepositorySectionView: View {
   let repository: Repository
+  let isDragActive: Bool
   @Binding var expandedRepoIDs: Set<Repository.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
   let terminalManager: WorktreeTerminalManager
@@ -26,6 +27,7 @@ struct RepositorySectionView: View {
         }
       }
     }
+    let isDragging = isDragActive
 
     Group {
       HStack {
@@ -34,11 +36,11 @@ struct RepositorySectionView: View {
           isRemoving: isRemovingRepository
         )
         .frame(maxWidth: .infinity, alignment: .leading)
-        if isRemovingRepository {
+        if isRemovingRepository && !isDragging {
           ProgressView()
             .controlSize(.small)
         }
-        if isHovering {
+        if isHovering && !isDragging {
           Menu {
             Button("Repo Settings") {
               openRepoSettings()
