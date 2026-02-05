@@ -370,28 +370,7 @@ private struct CommandPaletteRowView: View {
   }
 
   private var explicitShortcutSymbols: [String]? {
-    switch row.kind {
-    case .checkForUpdates:
-      return AppShortcuts.checkForUpdates.displaySymbols
-    case .openSettings:
-      return AppShortcuts.openSettings.displaySymbols
-    case .openRepository:
-      return AppShortcuts.openRepository.displaySymbols
-    case .newWorktree:
-      return AppShortcuts.newWorktree.displaySymbols
-    case .refreshWorktrees:
-      return AppShortcuts.refreshWorktrees.displaySymbols
-    case .openPullRequest,
-      .markPullRequestReady,
-      .mergePullRequest,
-      .copyCiFailureLogs,
-      .rerunFailedJobs,
-      .openFailingCheckDetails,
-      .worktreeSelect,
-      .removeWorktree,
-      .archiveWorktree:
-      return nil
-    }
+    row.appShortcutSymbols
   }
 
   var body: some View {
@@ -503,28 +482,7 @@ private struct CommandPaletteRowView: View {
   }
 
   private var explicitShortcutLabel: String? {
-    switch row.kind {
-    case .checkForUpdates:
-      return AppShortcuts.checkForUpdates.display
-    case .openSettings:
-      return AppShortcuts.openSettings.display
-    case .openRepository:
-      return AppShortcuts.openRepository.display
-    case .newWorktree:
-      return AppShortcuts.newWorktree.display
-    case .refreshWorktrees:
-      return AppShortcuts.refreshWorktrees.display
-    case .openPullRequest,
-      .markPullRequestReady,
-      .mergePullRequest,
-      .copyCiFailureLogs,
-      .rerunFailedJobs,
-      .openFailingCheckDetails,
-      .worktreeSelect,
-      .removeWorktree,
-      .archiveWorktree:
-      return nil
-    }
+    row.appShortcutLabel
   }
 }
 

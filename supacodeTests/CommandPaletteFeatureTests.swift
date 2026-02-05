@@ -280,7 +280,7 @@ struct CommandPaletteFeatureTests {
         items: [openSettings, newWorktree, selectFox, archiveFox, removeFox],
         query: ""
       ),
-      [openSettings, newWorktree]
+      []
     )
   }
 
@@ -422,7 +422,7 @@ struct CommandPaletteFeatureTests {
 
     let items = CommandPaletteFeature.commandPaletteItems(from: state)
     let ordered = CommandPaletteFeature.filterItems(items: items, query: "")
-    #expect(ordered.first?.title == "Merge Ready")
+    #expect(ordered.first?.title == "Merge PR")
   }
 
   @Test func recencyBreaksFuzzyTiesWithinGroup() {

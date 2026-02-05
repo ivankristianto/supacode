@@ -53,4 +53,55 @@ struct CommandPaletteItem: Identifiable, Equatable {
       return false
     }
   }
+
+  var isRootAction: Bool {
+    switch kind {
+    case .checkForUpdates, .openRepository, .openSettings, .newWorktree, .refreshWorktrees:
+      return true
+    case .openPullRequest,
+      .markPullRequestReady,
+      .mergePullRequest,
+      .copyCiFailureLogs,
+      .rerunFailedJobs,
+      .openFailingCheckDetails,
+      .worktreeSelect,
+      .removeWorktree,
+      .archiveWorktree:
+      return false
+    }
+  }
+
+  var appShortcut: AppShortcut? {
+    switch kind {
+    case .checkForUpdates:
+      return AppShortcuts.checkForUpdates
+    case .openRepository:
+      return AppShortcuts.openRepository
+    case .openSettings:
+      return AppShortcuts.openSettings
+    case .newWorktree:
+      return AppShortcuts.newWorktree
+    case .refreshWorktrees:
+      return AppShortcuts.refreshWorktrees
+    case .openPullRequest:
+      return AppShortcuts.openPullRequest
+    case .markPullRequestReady,
+      .mergePullRequest,
+      .copyCiFailureLogs,
+      .rerunFailedJobs,
+      .openFailingCheckDetails,
+      .worktreeSelect,
+      .removeWorktree,
+      .archiveWorktree:
+      return nil
+    }
+  }
+
+  var appShortcutLabel: String? {
+    appShortcut?.display
+  }
+
+  var appShortcutSymbols: [String]? {
+    appShortcut?.displaySymbols
+  }
 }

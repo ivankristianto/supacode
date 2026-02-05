@@ -147,7 +147,8 @@ struct CommandPaletteFeature {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     let globalItems = items.filter(\.isGlobal)
     guard !trimmed.isEmpty else {
-      return prioritizeItems(items: globalItems, recencyByID: recencyByID, now: now)
+      let visibleItems = globalItems.filter { !$0.isRootAction }
+      return prioritizeItems(items: visibleItems, recencyByID: recencyByID, now: now)
     }
     let worktreeItems = items.filter { !$0.isGlobal }
     let scorer = CommandPaletteFuzzyScorer(query: trimmed, recencyByID: recencyByID, now: now)
@@ -306,8 +307,8 @@ private func pullRequestItems(
     items.append(
       CommandPaletteItem(
         id: "pr.\(repositoryID).merge",
-        title: "Merge Ready",
-        subtitle: successfulChecksLabel,
+        title: "Merge PR",
+        subtitle: "Merge Ready - \(successfulChecksLabel)",
         kind: .mergePullRequest(worktreeID),
         priorityTier: 0
       )
