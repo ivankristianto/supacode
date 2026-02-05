@@ -79,6 +79,8 @@ nonisolated struct GithubGraphQLPullRequestResponse: Decodable {
     let deletions: Int
     let isDraft: Bool
     let reviewDecision: String?
+    let mergeable: String?
+    let mergeStateStatus: String?
     let updatedAt: Date?
     let url: String
     let headRefName: String?
@@ -94,6 +96,8 @@ nonisolated struct GithubGraphQLPullRequestResponse: Decodable {
         deletions: deletions,
         isDraft: isDraft,
         reviewDecision: reviewDecision,
+        mergeable: mergeable,
+        mergeStateStatus: mergeStateStatus,
         updatedAt: updatedAt,
         url: url,
         headRefName: headRefName,

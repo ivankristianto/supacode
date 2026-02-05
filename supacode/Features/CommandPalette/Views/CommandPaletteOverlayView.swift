@@ -315,7 +315,8 @@ private struct CommandPaletteRowView: View {
   private var badge: String? {
     switch row.kind {
     case .checkForUpdates, .openRepository, .openSettings, .newWorktree, .refreshWorktrees,
-      .worktreeSelect:
+      .openPullRequest, .markPullRequestReady, .mergePullRequest, .copyCiFailureLogs,
+      .rerunFailedJobs, .openFailingCheckDetails, .worktreeSelect:
       return nil
     case .removeWorktree:
       return "Remove"
@@ -336,6 +337,18 @@ private struct CommandPaletteRowView: View {
       return "plus"
     case .refreshWorktrees:
       return "arrow.clockwise"
+    case .openPullRequest:
+      return "arrow.up.right.square"
+    case .markPullRequestReady:
+      return "checkmark.seal"
+    case .mergePullRequest:
+      return "arrow.merge"
+    case .copyCiFailureLogs:
+      return "doc.on.doc"
+    case .rerunFailedJobs:
+      return "arrow.counterclockwise"
+    case .openFailingCheckDetails:
+      return "exclamationmark.triangle"
     case .worktreeSelect:
       return nil
     case .removeWorktree:
@@ -347,7 +360,9 @@ private struct CommandPaletteRowView: View {
 
   private var emphasis: Bool {
     switch row.kind {
-    case .checkForUpdates, .openRepository, .openSettings, .newWorktree, .refreshWorktrees:
+    case .checkForUpdates, .openRepository, .openSettings, .newWorktree, .refreshWorktrees,
+      .openPullRequest, .markPullRequestReady, .mergePullRequest, .copyCiFailureLogs,
+      .rerunFailedJobs, .openFailingCheckDetails:
       return true
     case .worktreeSelect, .removeWorktree, .archiveWorktree:
       return false
@@ -366,7 +381,15 @@ private struct CommandPaletteRowView: View {
       return AppShortcuts.newWorktree.displaySymbols
     case .refreshWorktrees:
       return AppShortcuts.refreshWorktrees.displaySymbols
-    case .worktreeSelect, .removeWorktree, .archiveWorktree:
+    case .openPullRequest,
+      .markPullRequestReady,
+      .mergePullRequest,
+      .copyCiFailureLogs,
+      .rerunFailedJobs,
+      .openFailingCheckDetails,
+      .worktreeSelect,
+      .removeWorktree,
+      .archiveWorktree:
       return nil
     }
   }
@@ -457,6 +480,18 @@ private struct CommandPaletteRowView: View {
       base = "Remove \(row.title)"
     case .archiveWorktree:
       base = "Archive \(row.title)"
+    case .openPullRequest:
+      base = "Open pull request on GitHub"
+    case .markPullRequestReady:
+      base = "Mark pull request ready for review"
+    case .mergePullRequest:
+      base = "Merge pull request"
+    case .copyCiFailureLogs:
+      base = "Copy CI failure logs"
+    case .rerunFailedJobs:
+      base = "Re-run failed jobs"
+    case .openFailingCheckDetails:
+      base = "Open failing check details"
     }
     if let explicitShortcutLabel {
       return "\(base) (\(explicitShortcutLabel))"
@@ -479,7 +514,15 @@ private struct CommandPaletteRowView: View {
       return AppShortcuts.newWorktree.display
     case .refreshWorktrees:
       return AppShortcuts.refreshWorktrees.display
-    case .worktreeSelect, .removeWorktree, .archiveWorktree:
+    case .openPullRequest,
+      .markPullRequestReady,
+      .mergePullRequest,
+      .copyCiFailureLogs,
+      .rerunFailedJobs,
+      .openFailingCheckDetails,
+      .worktreeSelect,
+      .removeWorktree,
+      .archiveWorktree:
       return nil
     }
   }

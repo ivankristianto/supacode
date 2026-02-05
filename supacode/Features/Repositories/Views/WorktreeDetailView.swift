@@ -396,6 +396,8 @@ private struct WorktreeToolbarPreview: View {
         deletions: 12,
         isDraft: false,
         reviewDecision: "APPROVED",
+        mergeable: "MERGEABLE",
+        mergeStateStatus: "CLEAN",
         updatedAt: Date(),
         url: "https://github.com/supabitapp/supacode/pull/128",
         headRefName: "feature/toolbar-preview",

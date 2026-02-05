@@ -39,6 +39,12 @@ struct CommandPaletteFeature {
     case removeWorktree(Worktree.ID, Repository.ID)
     case archiveWorktree(Worktree.ID, Repository.ID)
     case refreshWorktrees
+    case openPullRequest(Worktree.ID)
+    case markPullRequestReady(Worktree.ID)
+    case mergePullRequest(Worktree.ID)
+    case copyCiFailureLogs(Worktree.ID)
+    case rerunFailedJobs(Worktree.ID)
+    case openFailingCheckDetails(Worktree.ID)
   }
 
   @Dependency(\.date.now) private var now
@@ -140,7 +146,9 @@ struct CommandPaletteFeature {
   ) -> [CommandPaletteItem] {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     let globalItems = items.filter(\.isGlobal)
-    guard !trimmed.isEmpty else { return globalItems }
+    guard !trimmed.isEmpty else {
+      return prioritizeItems(items: globalItems, recencyByID: recencyByID, now: now)
+    }
     let worktreeItems = items.filter { !$0.isGlobal }
     let scorer = CommandPaletteFuzzyScorer(query: trimmed, recencyByID: recencyByID, now: now)
     return scorer.rankedItems(from: globalItems) + scorer.rankedItems(from: worktreeItems)
@@ -181,6 +189,17 @@ struct CommandPaletteFeature {
         kind: .refreshWorktrees
       ),
     ]
+    if let selectedWorktreeID = repositories.selectedWorktreeID,
+      let pullRequest = repositories.worktreeInfo(for: selectedWorktreeID)?.pullRequest,
+      pullRequest.number > 0,
+      pullRequest.state.uppercased() != "CLOSED"
+    {
+      let pullRequestActions = pullRequestItems(
+        pullRequest: pullRequest,
+        worktreeID: selectedWorktreeID
+      )
+      items.append(contentsOf: pullRequestActions)
+    }
     for row in repositories.orderedWorktreeRows() {
       guard !row.isPending, !row.isDeleting else { continue }
       let repositoryName = repositories.repositoryName(for: row.repositoryID) ?? "Repository"
@@ -196,6 +215,130 @@ struct CommandPaletteFeature {
     }
     return items
   }
+}
+
+private func pullRequestItems(
+  pullRequest: GithubPullRequest,
+  worktreeID: Worktree.ID
+) -> [CommandPaletteItem] {
+  let state = pullRequest.state.uppercased()
+  let isOpen = state == "OPEN"
+  let isDraft = pullRequest.isDraft
+  let reviewDecision = pullRequest.reviewDecision?.uppercased()
+  let checks = pullRequest.statusCheckRollup?.checks ?? []
+  let breakdown = PullRequestCheckBreakdown(checks: checks)
+  let hasFailingChecks = breakdown.failed > 0
+  let mergeable = pullRequest.mergeable?.uppercased() == "MERGEABLE"
+  let mergeStateClean = pullRequest.mergeStateStatus?.uppercased() == "CLEAN"
+  let canMerge =
+    isOpen
+    && !isDraft
+    && reviewDecision != "CHANGES_REQUESTED"
+    && mergeable
+    && mergeStateClean
+    && !hasFailingChecks
+
+  var items: [CommandPaletteItem] = [
+    CommandPaletteItem(
+      id: "pr.\(worktreeID).open",
+      title: "Open PR on GitHub",
+      subtitle: pullRequest.title,
+      kind: .openPullRequest(worktreeID),
+      priorityTier: 2
+    ),
+  ]
+
+  if isOpen && isDraft {
+    items.append(
+      CommandPaletteItem(
+        id: "pr.\(worktreeID).ready",
+        title: "Mark PR Ready for Review",
+        subtitle: pullRequest.title,
+        kind: .markPullRequestReady(worktreeID),
+        priorityTier: 0
+      )
+    )
+  }
+
+  if isOpen && hasFailingChecks {
+    let logTier = isDraft ? 1 : 0
+    let followupTier = logTier + 1
+    items.append(
+      CommandPaletteItem(
+        id: "pr.\(worktreeID).copy-ci-logs",
+        title: "Copy CI Failure Logs",
+        subtitle: pullRequest.title,
+        kind: .copyCiFailureLogs(worktreeID),
+        priorityTier: logTier
+      )
+    )
+    items.append(
+      CommandPaletteItem(
+        id: "pr.\(worktreeID).rerun-failed-jobs",
+        title: "Re-run Failed Jobs",
+        subtitle: pullRequest.title,
+        kind: .rerunFailedJobs(worktreeID),
+        priorityTier: followupTier
+      )
+    )
+    if checks.contains(where: { $0.checkState == .failure && $0.detailsUrl != nil }) {
+      items.append(
+        CommandPaletteItem(
+          id: "pr.\(worktreeID).open-failing-check",
+          title: "Open Failing Check Details",
+          subtitle: pullRequest.title,
+          kind: .openFailingCheckDetails(worktreeID),
+          priorityTier: followupTier
+        )
+      )
+    }
+  }
+
+  if canMerge {
+    items.append(
+      CommandPaletteItem(
+        id: "pr.\(worktreeID).merge",
+        title: "Merge PR",
+        subtitle: pullRequest.title,
+        kind: .mergePullRequest(worktreeID),
+        priorityTier: 0
+      )
+    )
+  }
+
+  return items
+}
+
+private func prioritizeItems(
+  items: [CommandPaletteItem],
+  recencyByID: [CommandPaletteItem.ID: TimeInterval],
+  now: Date
+) -> [CommandPaletteItem] {
+  let scored = items.enumerated().map { index, item in
+    (item: item, index: index, recency: commandPaletteRecencyScore(item, recencyByID: recencyByID, now: now))
+  }
+  let sorted = scored.sorted { left, right in
+    if left.item.priorityTier != right.item.priorityTier {
+      return left.item.priorityTier < right.item.priorityTier
+    }
+    if left.item.priorityTier < CommandPaletteItem.defaultPriorityTier, left.recency != right.recency {
+      return left.recency > right.recency
+    }
+    return left.index < right.index
+  }
+  return sorted.map(\.item)
+}
+
+private func commandPaletteRecencyScore(
+  _ item: CommandPaletteItem,
+  recencyByID: [CommandPaletteItem.ID: TimeInterval],
+  now: Date
+) -> Double {
+  guard let lastActivated = recencyByID[item.id] else { return 0 }
+  let ageSeconds = max(0, now.timeIntervalSince1970 - lastActivated)
+  let ageDays = ageSeconds / 86_400
+  let cappedAgeDays = min(ageDays, 30)
+  return pow(0.5, cappedAgeDays / 7)
 }
 
 private func delegateAction(for kind: CommandPaletteItem.Kind) -> CommandPaletteFeature.Delegate {
@@ -216,6 +359,18 @@ private func delegateAction(for kind: CommandPaletteItem.Kind) -> CommandPalette
     return .archiveWorktree(worktreeID, repositoryID)
   case .refreshWorktrees:
     return .refreshWorktrees
+  case .openPullRequest(let worktreeID):
+    return .openPullRequest(worktreeID)
+  case .markPullRequestReady(let worktreeID):
+    return .markPullRequestReady(worktreeID)
+  case .mergePullRequest(let worktreeID):
+    return .mergePullRequest(worktreeID)
+  case .copyCiFailureLogs(let worktreeID):
+    return .copyCiFailureLogs(worktreeID)
+  case .rerunFailedJobs(let worktreeID):
+    return .rerunFailedJobs(worktreeID)
+  case .openFailingCheckDetails(let worktreeID):
+    return .openFailingCheckDetails(worktreeID)
   }
 }
 
@@ -455,6 +610,10 @@ private struct CommandPaletteFuzzyScorer {
       return itemBMatchDistance > itemAMatchDistance ? -1 : 1
     }
 
+    if itemA.item.priorityTier != itemB.item.priorityTier {
+      return itemA.item.priorityTier < itemB.item.priorityTier ? -1 : 1
+    }
+
     if itemA.recencyScore != itemB.recencyScore {
       return itemA.recencyScore > itemB.recencyScore ? -1 : 1
     }
@@ -550,11 +709,7 @@ private struct CommandPaletteFuzzyScorer {
   }
 
   private func recencyScore(for item: CommandPaletteItem) -> Double {
-    guard let lastActivated = recencyByID[item.id] else { return 0 }
-    let ageSeconds = max(0, now.timeIntervalSince1970 - lastActivated)
-    let ageDays = ageSeconds / 86_400
-    let cappedAgeDays = min(ageDays, 30)
-    return pow(0.5, cappedAgeDays / 7)
+    commandPaletteRecencyScore(item, recencyByID: recencyByID, now: now)
   }
 
   private func scoreFuzzy(

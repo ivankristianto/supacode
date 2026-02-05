@@ -57,6 +57,24 @@ struct RepositorySettingsView: View {
         }
       }
       Section {
+        Picker(
+          "Merge strategy",
+          selection: settings.pullRequestMergeStrategy
+        ) {
+          ForEach(PullRequestMergeStrategy.allCases) { strategy in
+            Text(strategy.title)
+              .tag(strategy)
+          }
+        }
+        .labelsHidden()
+      } header: {
+        VStack(alignment: .leading, spacing: 4) {
+          Text("Pull Requests")
+          Text("Used when merging PRs from the command palette")
+            .foregroundStyle(.secondary)
+        }
+      }
+      Section {
         ZStack(alignment: .topLeading) {
           TextEditor(
             text: settings.setupScript

@@ -85,6 +85,10 @@ nonisolated struct GithubPullRequestStatusCheck: Decodable, Equatable, Hashable 
 nonisolated struct GithubPullRequestStatusCheckRollup: Decodable, Equatable, Hashable {
   let checks: [GithubPullRequestStatusCheck]
 
+  init(checks: [GithubPullRequestStatusCheck]) {
+    self.checks = checks
+  }
+
   init(from decoder: Decoder) throws {
     if let checks = try? [GithubPullRequestStatusCheck](from: decoder) {
       self.checks = checks

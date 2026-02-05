@@ -524,6 +524,24 @@ struct AppFeature {
       case .commandPalette(.delegate(.refreshWorktrees)):
         return .send(.repositories(.refreshWorktrees))
 
+      case .commandPalette(.delegate(.openPullRequest(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .openOnGithub)))
+
+      case .commandPalette(.delegate(.markPullRequestReady(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .markReadyForReview)))
+
+      case .commandPalette(.delegate(.mergePullRequest(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .merge)))
+
+      case .commandPalette(.delegate(.copyCiFailureLogs(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .copyCiFailureLogs)))
+
+      case .commandPalette(.delegate(.rerunFailedJobs(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .rerunFailedJobs)))
+
+      case .commandPalette(.delegate(.openFailingCheckDetails(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .openFailingCheckDetails)))
+
       case .commandPalette:
         return .none
 

@@ -366,6 +366,65 @@ struct CommandPaletteFeatureTests {
     )
   }
 
+  @Test func commandPaletteDraftActionRanksFirst() {
+    let rootPath = "/tmp/repo"
+    let worktree = makeWorktree(id: "\(rootPath)/wt-draft", name: "draft", repoRoot: rootPath)
+    let repository = makeRepository(rootPath: rootPath, name: "Repo", worktrees: [worktree])
+    var state = RepositoriesFeature.State(repositories: [repository])
+    state.selection = .worktree(worktree.id)
+    state.worktreeInfoByID[worktree.id] = WorktreeInfoEntry(
+      addedLines: nil,
+      removedLines: nil,
+      pullRequest: makePullRequest(isDraft: true)
+    )
+
+    let items = CommandPaletteFeature.commandPaletteItems(from: state)
+    let ordered = CommandPaletteFeature.filterItems(items: items, query: "")
+    #expect(ordered.first?.title == "Mark PR Ready for Review")
+  }
+
+  @Test func commandPaletteFailingActionRanksFirst() {
+    let rootPath = "/tmp/repo"
+    let worktree = makeWorktree(id: "\(rootPath)/wt-failing", name: "failing", repoRoot: rootPath)
+    let repository = makeRepository(rootPath: rootPath, name: "Repo", worktrees: [worktree])
+    var state = RepositoriesFeature.State(repositories: [repository])
+    state.selection = .worktree(worktree.id)
+    let failingCheck = GithubPullRequestStatusCheck(
+      status: "COMPLETED",
+      conclusion: "FAILURE",
+      state: nil
+    )
+    state.worktreeInfoByID[worktree.id] = WorktreeInfoEntry(
+      addedLines: nil,
+      removedLines: nil,
+      pullRequest: makePullRequest(checks: [failingCheck])
+    )
+
+    let items = CommandPaletteFeature.commandPaletteItems(from: state)
+    let ordered = CommandPaletteFeature.filterItems(items: items, query: "")
+    #expect(ordered.first?.title == "Copy CI Failure Logs")
+  }
+
+  @Test func commandPaletteMergeActionRanksFirstWhenMergeable() {
+    let rootPath = "/tmp/repo"
+    let worktree = makeWorktree(id: "\(rootPath)/wt-merge", name: "merge", repoRoot: rootPath)
+    let repository = makeRepository(rootPath: rootPath, name: "Repo", worktrees: [worktree])
+    var state = RepositoriesFeature.State(repositories: [repository])
+    state.selection = .worktree(worktree.id)
+    state.worktreeInfoByID[worktree.id] = WorktreeInfoEntry(
+      addedLines: nil,
+      removedLines: nil,
+      pullRequest: makePullRequest(
+        mergeable: "MERGEABLE",
+        mergeStateStatus: "CLEAN"
+      )
+    )
+
+    let items = CommandPaletteFeature.commandPaletteItems(from: state)
+    let ordered = CommandPaletteFeature.filterItems(items: items, query: "")
+    #expect(ordered.first?.title == "Merge PR")
+  }
+
   @Test func recencyBreaksFuzzyTiesWithinGroup() {
     let now = Date(timeIntervalSince1970: 1_000_000)
     let recent = CommandPaletteItem(
@@ -450,5 +509,30 @@ private func makeRepository(
     rootURL: rootURL,
     name: name,
     worktrees: IdentifiedArray(uniqueElements: worktrees)
+  )
+}
+
+private func makePullRequest(
+  state: String = "OPEN",
+  isDraft: Bool = false,
+  reviewDecision: String? = nil,
+  mergeable: String? = nil,
+  mergeStateStatus: String? = nil,
+  checks: [GithubPullRequestStatusCheck] = []
+) -> GithubPullRequest {
+  GithubPullRequest(
+    number: 1,
+    title: "PR",
+    state: state,
+    additions: 0,
+    deletions: 0,
+    isDraft: isDraft,
+    reviewDecision: reviewDecision,
+    mergeable: mergeable,
+    mergeStateStatus: mergeStateStatus,
+    updatedAt: nil,
+    url: "https://example.com/pull/1",
+    headRefName: "feature",
+    statusCheckRollup: checks.isEmpty ? nil : GithubPullRequestStatusCheckRollup(checks: checks)
   )
 }
