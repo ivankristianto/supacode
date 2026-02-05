@@ -367,10 +367,6 @@ private struct CommandPaletteRowView: View {
     }
   }
 
-  private var explicitShortcutSymbols: [String]? {
-    row.appShortcutSymbols
-  }
-
   var body: some View {
     Button(action: activate) {
       HStack(spacing: 8) {
@@ -383,7 +379,7 @@ private struct CommandPaletteRowView: View {
         }
 
         VStack(alignment: .leading, spacing: 2) {
-          Text(row.title)
+          Text(titleText)
             .fontWeight(emphasis ? .medium : .regular)
 
           if let subtitle = row.subtitle {
@@ -406,10 +402,7 @@ private struct CommandPaletteRowView: View {
             .foregroundStyle(.secondary)
         }
 
-        if let explicitShortcutSymbols {
-          ShortcutSymbolsView(symbols: explicitShortcutSymbols)
-            .foregroundStyle(.secondary)
-        } else if let shortcutIndex {
+        if let shortcutIndex {
           ShortcutSymbolsView(symbols: commandPaletteShortcutSymbols(for: shortcutIndex))
             .foregroundStyle(.secondary)
         }
@@ -477,6 +470,13 @@ private struct CommandPaletteRowView: View {
       return "\(base) (\(commandPaletteShortcutLabel(for: shortcutIndex)))"
     }
     return base
+  }
+
+  private var titleText: String {
+    guard let shortcutLabel = row.appShortcutLabel else {
+      return row.title
+    }
+    return "\(row.title) (\(shortcutLabel))"
   }
 
   private var explicitShortcutLabel: String? {
