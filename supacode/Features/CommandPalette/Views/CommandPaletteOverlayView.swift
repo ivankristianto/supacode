@@ -8,15 +8,9 @@ struct CommandPaletteOverlayView: View {
   let items: [CommandPaletteItem]
   @FocusState private var isQueryFocused: Bool
   @State private var hoveredID: CommandPaletteItem.ID?
+  @State private var filteredItems: [CommandPaletteItem] = []
 
   var body: some View {
-    let now = Date.now
-    let filteredItems = CommandPaletteFeature.filterItems(
-      items: items,
-      query: store.query,
-      recencyByID: store.recencyByItemID,
-      now: now
-    )
     ZStack {
       if store.isPresented {
         ZStack {
@@ -76,16 +70,26 @@ struct CommandPaletteOverlayView: View {
     .onChange(of: store.isPresented) { _, newValue in
       isQueryFocused = newValue
       if newValue {
-        updateSelection(rows: filteredItems)
+        let updatedItems = refreshFilteredItems(items: items)
+        updateSelection(rows: updatedItems)
       } else {
         hoveredID = nil
       }
     }
     .onChange(of: store.query) { _, _ in
-      resetSelection(rows: filteredItems)
+      let updatedItems = refreshFilteredItems(items: items)
+      resetSelection(rows: updatedItems)
     }
-    .onChange(of: filteredItems) { _, newValue in
-      updateSelection(rows: newValue)
+    .onChange(of: items) { _, _ in
+      let updatedItems = refreshFilteredItems(items: items)
+      updateSelection(rows: updatedItems)
+    }
+    .onChange(of: store.recencyByItemID) { _, _ in
+      let updatedItems = refreshFilteredItems(items: items)
+      updateSelection(rows: updatedItems)
+    }
+    .task {
+      _ = refreshFilteredItems(items: items)
     }
   }
 
@@ -128,6 +132,18 @@ struct CommandPaletteOverlayView: View {
   private func activate(_ id: CommandPaletteItem.ID, rows: [CommandPaletteItem]) {
     guard let item = rows.first(where: { $0.id == id }) else { return }
     store.send(.activateItem(item))
+  }
+
+  private func refreshFilteredItems(items: [CommandPaletteItem]) -> [CommandPaletteItem] {
+    let now = Date.now
+    let updatedItems = CommandPaletteFeature.filterItems(
+      items: items,
+      query: store.query,
+      recencyByID: store.recencyByItemID,
+      now: now
+    )
+    filteredItems = updatedItems
+    return updatedItems
   }
 }
 

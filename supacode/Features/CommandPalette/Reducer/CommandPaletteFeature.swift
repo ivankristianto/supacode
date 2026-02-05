@@ -255,6 +255,67 @@ private func pullRequestItems(
     && mergeStateClean
     && !hasFailingChecks
 
+  func makeReadyItem() -> CommandPaletteItem? {
+    guard isOpen && isDraft else { return nil }
+    return CommandPaletteItem(
+      id: CommandPaletteItemID.pullRequestReady(repositoryID),
+      title: "Mark PR Ready for Review",
+      subtitle: pullRequest.title,
+      kind: .markPullRequestReady(worktreeID),
+      priorityTier: 0
+    )
+  }
+
+  func makeFailingItems() -> [CommandPaletteItem] {
+    guard isOpen && hasFailingChecks else { return [] }
+    let logTier = isDraft ? 1 : 0
+    let followupTier = logTier + 1
+    var failingItems: [CommandPaletteItem] = [
+      CommandPaletteItem(
+        id: CommandPaletteItemID.pullRequestCopyCiLogs(repositoryID),
+        title: "Copy CI Failure Logs",
+        subtitle: pullRequest.title,
+        kind: .copyCiFailureLogs(worktreeID),
+        priorityTier: logTier
+      ),
+      CommandPaletteItem(
+        id: CommandPaletteItemID.pullRequestRerunFailedJobs(repositoryID),
+        title: "Re-run Failed Jobs",
+        subtitle: pullRequest.title,
+        kind: .rerunFailedJobs(worktreeID),
+        priorityTier: followupTier
+      ),
+    ]
+    if checks.contains(where: { $0.checkState == .failure && $0.detailsUrl != nil }) {
+      failingItems.append(
+        CommandPaletteItem(
+          id: CommandPaletteItemID.pullRequestOpenFailingCheck(repositoryID),
+          title: "Open Failing Check Details",
+          subtitle: pullRequest.title,
+          kind: .openFailingCheckDetails(worktreeID),
+          priorityTier: followupTier
+        )
+      )
+    }
+    return failingItems
+  }
+
+  func makeMergeItem() -> CommandPaletteItem? {
+    guard canMerge else { return nil }
+    let successfulChecks = breakdown.passed
+    let successfulChecksLabel =
+      successfulChecks == 1
+      ? "1 successful check"
+      : "\(successfulChecks) successful checks"
+    return CommandPaletteItem(
+      id: CommandPaletteItemID.pullRequestMerge(repositoryID),
+      title: "Merge PR",
+      subtitle: "Merge Ready - \(successfulChecksLabel)",
+      kind: .mergePullRequest(worktreeID),
+      priorityTier: 0
+    )
+  }
+
   var items: [CommandPaletteItem] = [
     CommandPaletteItem(
       id: CommandPaletteItemID.pullRequestOpen(repositoryID),
@@ -265,67 +326,14 @@ private func pullRequestItems(
     ),
   ]
 
-  if isOpen && isDraft {
-    items.append(
-      CommandPaletteItem(
-        id: CommandPaletteItemID.pullRequestReady(repositoryID),
-        title: "Mark PR Ready for Review",
-        subtitle: pullRequest.title,
-        kind: .markPullRequestReady(worktreeID),
-        priorityTier: 0
-      )
-    )
+  if let readyItem = makeReadyItem() {
+    items.append(readyItem)
   }
 
-  if isOpen && hasFailingChecks {
-    let logTier = isDraft ? 1 : 0
-    let followupTier = logTier + 1
-    items.append(
-      CommandPaletteItem(
-        id: CommandPaletteItemID.pullRequestCopyCiLogs(repositoryID),
-        title: "Copy CI Failure Logs",
-        subtitle: pullRequest.title,
-        kind: .copyCiFailureLogs(worktreeID),
-        priorityTier: logTier
-      )
-    )
-    items.append(
-      CommandPaletteItem(
-        id: CommandPaletteItemID.pullRequestRerunFailedJobs(repositoryID),
-        title: "Re-run Failed Jobs",
-        subtitle: pullRequest.title,
-        kind: .rerunFailedJobs(worktreeID),
-        priorityTier: followupTier
-      )
-    )
-    if checks.contains(where: { $0.checkState == .failure && $0.detailsUrl != nil }) {
-      items.append(
-        CommandPaletteItem(
-          id: CommandPaletteItemID.pullRequestOpenFailingCheck(repositoryID),
-          title: "Open Failing Check Details",
-          subtitle: pullRequest.title,
-          kind: .openFailingCheckDetails(worktreeID),
-          priorityTier: followupTier
-        )
-      )
-    }
-  }
+  items.append(contentsOf: makeFailingItems())
 
-  if canMerge {
-    let successfulChecks = breakdown.passed
-    let successfulChecksLabel =
-      successfulChecks == 1
-      ? "1 successful check"
-      : "\(successfulChecks) successful checks"
-    items.append(
-      CommandPaletteItem(
-        id: CommandPaletteItemID.pullRequestMerge(repositoryID),
-        title: "Merge PR",
-        subtitle: "Merge Ready - \(successfulChecksLabel)",
-        kind: .mergePullRequest(worktreeID),
-        priorityTier: 0
-      )
-    )
+  if let mergeItem = makeMergeItem() {
+    items.append(mergeItem)
   }
 
   return items
