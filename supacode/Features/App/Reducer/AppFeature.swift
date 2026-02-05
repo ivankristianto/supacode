@@ -12,6 +12,10 @@ private let notificationSound: NSSound? = {
   return NSSound(contentsOf: url, byReference: true)
 }()
 
+private enum CancelID {
+  static let periodicRefresh = "app.periodicRefresh"
+}
+
 @Reducer
 struct AppFeature {
   @ObservableState
@@ -94,9 +98,21 @@ struct AppFeature {
         switch phase {
         case .active:
           analyticsClient.capture("app_activated", nil)
-          return .send(.repositories(.loadPersistedRepositories))
-        default:
-          return .none
+          return .merge(
+            .send(.repositories(.refreshWorktrees)),
+            .run { send in
+              while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { return }
+                await send(.repositories(.refreshWorktrees))
+              }
+            }
+            .cancellable(id: CancelID.periodicRefresh, cancelInFlight: true)
+          )
+        case .inactive, .background:
+          return .cancel(id: CancelID.periodicRefresh)
+        @unknown default:
+          return .cancel(id: CancelID.periodicRefresh)
         }
 
       case .repositories(.delegate(.selectedWorktreeChanged(let worktree))):
