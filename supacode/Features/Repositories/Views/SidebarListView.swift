@@ -5,6 +5,7 @@ struct SidebarListView: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
   @Binding var expandedRepoIDs: Set<Repository.ID>
   let terminalManager: WorktreeTerminalManager
+  @State private var isDragActive = false
 
   var body: some View {
     let selection = Binding<SidebarSelection?>(
@@ -33,6 +34,7 @@ struct SidebarListView: View {
         ForEach(store.repositories) { repository in
           RepositorySectionView(
             repository: repository,
+            isDragActive: isDragActive,
             expandedRepoIDs: $expandedRepoIDs,
             store: store,
             terminalManager: terminalManager
@@ -58,6 +60,7 @@ struct SidebarListView: View {
           } else if let repository = repositoriesByID[repositoryID] {
             RepositorySectionView(
               repository: repository,
+              isDragActive: isDragActive,
               expandedRepoIDs: $expandedRepoIDs,
               store: store,
               terminalManager: terminalManager
@@ -71,6 +74,23 @@ struct SidebarListView: View {
     }
     .listStyle(.sidebar)
     .frame(minWidth: 220)
+    .onDragSessionUpdated { session in
+      if case .ended = session.phase {
+        if isDragActive {
+          isDragActive = false
+        }
+        return
+      }
+      if case .dataTransferCompleted = session.phase {
+        if isDragActive {
+          isDragActive = false
+        }
+        return
+      }
+      if !isDragActive {
+        isDragActive = true
+      }
+    }
     .safeAreaInset(edge: .bottom) {
       SidebarFooterView(store: store)
     }
