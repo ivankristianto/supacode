@@ -32,6 +32,7 @@ final class WorktreeTerminalState {
   var onFocusChanged: ((UUID) -> Void)?
   var onTaskStatusChanged: ((WorktreeTaskStatus) -> Void)?
   var onRunScriptStatusChanged: ((Bool) -> Void)?
+  var onCommandPaletteToggle: (() -> Void)?
   var onSetupScriptConsumed: (() -> Void)?
 
   init(runtime: GhosttyRuntime, worktree: Worktree, runSetupScript: Bool = false) {
@@ -486,6 +487,11 @@ final class WorktreeTerminalState {
     view.bridge.onGotoTab = { [weak self] target in
       guard let self else { return false }
       return self.handleGotoTabRequest(target)
+    }
+    view.bridge.onCommandPaletteToggle = { [weak self] in
+      guard let self else { return false }
+      self.onCommandPaletteToggle?()
+      return true
     }
     view.bridge.onProgressReport = { [weak self] _ in
       guard let self else { return }

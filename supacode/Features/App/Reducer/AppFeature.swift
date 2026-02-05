@@ -23,11 +23,15 @@ struct AppFeature {
     var repositories: RepositoriesFeature.State
     var settings: SettingsFeature.State
     var updates = UpdatesFeature.State()
+    var commandPalette = CommandPaletteFeature.State()
     var openActionSelection: OpenWorktreeAction = .finder
     var selectedRunScript: String = ""
     var runScriptStatusByWorktreeID: [Worktree.ID: Bool] = [:]
     var notificationIndicatorCount: Int = 0
     @Presents var alert: AlertState<Alert>?
+    var commandPaletteItems: [CommandPaletteItem] {
+      CommandPaletteFeature.commandPaletteItems(from: repositories)
+    }
 
     init(
       repositories: RepositoriesFeature.State = .init(),
@@ -44,6 +48,7 @@ struct AppFeature {
     case repositories(RepositoriesFeature.Action)
     case settings(SettingsFeature.Action)
     case updates(UpdatesFeature.Action)
+    case commandPalette(CommandPaletteFeature.Action)
     case openActionSelectionChanged(OpenWorktreeAction)
     case worktreeSettingsLoaded(RepositorySettings, worktreeID: Worktree.ID)
     case openSelectedWorktree
@@ -72,6 +77,7 @@ struct AppFeature {
   @Dependency(\.analyticsClient) private var analyticsClient
   @Dependency(\.repositoryPersistence) private var repositoryPersistence
   @Dependency(\.workspaceClient) private var workspaceClient
+  @Dependency(\.settingsWindowClient) private var settingsWindowClient
   @Dependency(\.terminalClient) private var terminalClient
   @Dependency(\.worktreeInfoWatcher) private var worktreeInfoWatcher
 
@@ -179,6 +185,7 @@ struct AppFeature {
 
       case .repositories(.delegate(.repositoriesChanged(let repositories))):
         let ids = Set(repositories.flatMap { $0.worktrees.map(\.id) })
+        let recencyIDs = CommandPaletteFeature.recencyRetentionIDs(from: repositories)
         let worktrees = state.repositories.worktreesForInfoWatcher()
         state.runScriptStatusByWorktreeID = state.runScriptStatusByWorktreeID.filter { ids.contains($0.key) }
         if case .repository(let repositoryID)? = state.settings.selection,
@@ -186,6 +193,7 @@ struct AppFeature {
         {
           return .merge(
             .send(.settings(.setSelection(.general))),
+            .send(.commandPalette(.pruneRecency(recencyIDs))),
             .run { _ in
               await terminalClient.send(.prune(ids))
             },
@@ -195,6 +203,7 @@ struct AppFeature {
           )
         }
         return .merge(
+          .send(.commandPalette(.pruneRecency(recencyIDs))),
           .run { _ in
             await terminalClient.send(.prune(ids))
           },
@@ -211,9 +220,7 @@ struct AppFeature {
         return .merge(
           .send(.settings(.setSelection(selection))),
           .run { _ in
-            await MainActor.run {
-              SettingsWindowManager.shared.show()
-            }
+            await settingsWindowClient.show()
           }
         )
 
@@ -506,6 +513,56 @@ struct AppFeature {
       case .updates:
         return .none
 
+      case .commandPalette(.delegate(.selectWorktree(let worktreeID))):
+        return .send(.repositories(.selectWorktree(worktreeID)))
+
+      case .commandPalette(.delegate(.checkForUpdates)):
+        return .send(.updates(.checkForUpdates))
+
+      case .commandPalette(.delegate(.openSettings)):
+        return .merge(
+          .send(.settings(.setSelection(.general))),
+          .run { _ in
+            await settingsWindowClient.show()
+          }
+        )
+
+      case .commandPalette(.delegate(.newWorktree)):
+        return .send(.repositories(.createRandomWorktree))
+
+      case .commandPalette(.delegate(.openRepository)):
+        return .send(.repositories(.setOpenPanelPresented(true)))
+
+      case .commandPalette(.delegate(.removeWorktree(let worktreeID, let repositoryID))):
+        return .send(.repositories(.requestDeleteWorktree(worktreeID, repositoryID)))
+
+      case .commandPalette(.delegate(.archiveWorktree(let worktreeID, let repositoryID))):
+        return .send(.repositories(.requestArchiveWorktree(worktreeID, repositoryID)))
+
+      case .commandPalette(.delegate(.refreshWorktrees)):
+        return .send(.repositories(.refreshWorktrees))
+
+      case .commandPalette(.delegate(.openPullRequest(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .openOnGithub)))
+
+      case .commandPalette(.delegate(.markPullRequestReady(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .markReadyForReview)))
+
+      case .commandPalette(.delegate(.mergePullRequest(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .merge)))
+
+      case .commandPalette(.delegate(.copyCiFailureLogs(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .copyCiFailureLogs)))
+
+      case .commandPalette(.delegate(.rerunFailedJobs(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .rerunFailedJobs)))
+
+      case .commandPalette(.delegate(.openFailingCheckDetails(let worktreeID))):
+        return .send(.repositories(.pullRequestAction(worktreeID, .openFailingCheckDetails)))
+
+      case .commandPalette:
+        return .none
+
       case .terminalEvent(.notificationReceived(let worktreeID, _, _)):
         var effects: [Effect<Action>] = [
           .send(.repositories(.worktreeNotificationReceived(worktreeID)))
@@ -539,6 +596,14 @@ struct AppFeature {
         }
         return .none
 
+      case .terminalEvent(.commandPaletteToggleRequested(let worktreeID)):
+        if state.commandPalette.isPresented {
+          return .send(.commandPalette(.setPresented(false)))
+        }
+        return .merge(
+          .send(.repositories(.selectWorktree(worktreeID))),
+          .send(.commandPalette(.setPresented(true)))
+        )
       case .terminalEvent(.setupScriptConsumed(let worktreeID)):
         return .send(.repositories(.consumeSetupScript(worktreeID)))
 
@@ -556,6 +621,9 @@ struct AppFeature {
     }
     Scope(state: \.updates, action: \.updates) {
       UpdatesFeature()
+    }
+    Scope(state: \.commandPalette, action: \.commandPalette) {
+      CommandPaletteFeature()
     }
   }
 }

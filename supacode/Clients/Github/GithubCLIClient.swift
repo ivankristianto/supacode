@@ -43,6 +43,10 @@ struct GithubCLIClient {
   var defaultBranch: @Sendable (URL) async throws -> String
   var latestRun: @Sendable (URL, String) async throws -> GithubWorkflowRun?
   var batchPullRequests: @Sendable (String, String, String, [String]) async throws -> [String: GithubPullRequest]
+  var mergePullRequest: @Sendable (URL, Int, PullRequestMergeStrategy) async throws -> Void
+  var markPullRequestReady: @Sendable (URL, Int) async throws -> Void
+  var rerunFailedJobs: @Sendable (URL, Int) async throws -> Void
+  var failedRunLogs: @Sendable (URL, Int) async throws -> String
   var isAvailable: @Sendable () async -> Bool
   var authStatus: @Sendable () async throws -> GithubAuthStatus?
 }
@@ -74,7 +78,7 @@ extension GithubCLIClient: DependencyKey {
             "--limit",
             "1",
             "--json",
-            "workflowName,name,displayTitle,status,conclusion,createdAt,updatedAt",
+            "databaseId,workflowName,name,displayTitle,status,conclusion,createdAt,updatedAt",
           ],
           repoRoot: repoRoot
         )
@@ -131,6 +135,53 @@ extension GithubCLIClient: DependencyKey {
         }
         return results
       },
+      mergePullRequest: { repoRoot, pullRequestNumber, strategy in
+        _ = try await runGh(
+          shell: shell,
+          arguments: [
+            "pr",
+            "merge",
+            "\(pullRequestNumber)",
+            "--\(strategy.ghArgument)",
+          ],
+          repoRoot: repoRoot
+        )
+      },
+      markPullRequestReady: { repoRoot, pullRequestNumber in
+        _ = try await runGh(
+          shell: shell,
+          arguments: [
+            "pr",
+            "ready",
+            "\(pullRequestNumber)",
+          ],
+          repoRoot: repoRoot
+        )
+      },
+      rerunFailedJobs: { repoRoot, runID in
+        _ = try await runGh(
+          shell: shell,
+          arguments: [
+            "run",
+            "rerun",
+            "\(runID)",
+            "--failed",
+          ],
+          repoRoot: repoRoot
+        )
+      },
+      failedRunLogs: { repoRoot, runID in
+        try await runGh(
+          shell: shell,
+          arguments: [
+            "run",
+            "view",
+            "\(runID)",
+            "--log-failed",
+          ],
+          repoRoot: repoRoot
+        )
+      },
       isAvailable: {
         do {
           _ = try await runGh(shell: shell, arguments: ["--version"], repoRoot: nil)
@@ -161,6 +212,10 @@ extension GithubCLIClient: DependencyKey {
     defaultBranch: { _ in "main" },
     latestRun: { _, _ in nil },
     batchPullRequests: { _, _, _, _ in [:] },
+    mergePullRequest: { _, _, _ in },
+    markPullRequestReady: { _, _ in },
+    rerunFailedJobs: { _, _ in },
+    failedRunLogs: { _, _ in "" },
     isAvailable: { true },
     authStatus: { GithubAuthStatus(username: "testuser", host: "github.com") }
   )
@@ -197,9 +252,18 @@ nonisolated private func makeBatchPullRequestsQuery(
           deletions
           isDraft
           reviewDecision
+          mergeable
+          mergeStateStatus
           url
           updatedAt
           headRefName
+          baseRefName
+          commits {
+            totalCount
+          }
+          author {
+            login
+          }
           headRepository {
             name
             owner { login }

@@ -1,18 +1,19 @@
 import SwiftUI
 
 struct PullRequestChecksPopoverView: View {
+  let pullRequest: GithubPullRequest
   let checks: [GithubPullRequestStatusCheck]
-  let pullRequestURL: URL?
-  let pullRequestTitle: String?
   private let breakdown: PullRequestCheckBreakdown
   private let sortedChecks: [GithubPullRequestStatusCheck]
   @Environment(\.analyticsClient) private var analyticsClient
   @Environment(\.openURL) private var openURL
 
-  init(checks: [GithubPullRequestStatusCheck], pullRequestURL: URL?, pullRequestTitle: String?) {
+  init(
+    pullRequest: GithubPullRequest,
+    checks: [GithubPullRequestStatusCheck]
+  ) {
+    self.pullRequest = pullRequest
     self.checks = checks
-    self.pullRequestURL = pullRequestURL
-    self.pullRequestTitle = pullRequestTitle
     self.breakdown = PullRequestCheckBreakdown(checks: checks)
     self.sortedChecks = checks.sorted {
       let left = Self.sortRank(for: $0.checkState)
@@ -25,6 +26,31 @@ struct PullRequestChecksPopoverView: View {
   }
 
   var body: some View {
+    let pullRequestURL = URL(string: pullRequest.url)
+    let stateLabel = pullRequest.state.uppercased()
+    let draftLabel = pullRequest.isDraft ? "\(stateLabel)/DRAFT" : stateLabel
+    let titleLine =
+      Text("\(draftLabel) - ").foregroundStyle(.secondary)
+      + Text(pullRequest.title)
+      + Text(verbatim: " #\(pullRequest.number)").foregroundStyle(.secondary)
+    let authorLogin = pullRequest.authorLogin ?? "Someone"
+    let commitsCount = pullRequest.commitsCount ?? 0
+    let commitsLabel = commitsCount == 1 ? "commit" : "commits"
+    let baseRefName = pullRequest.baseRefName ?? "base"
+    let headRefName = pullRequest.headRefName ?? "branch"
+    let summaryLine =
+      Text("\(authorLogin) wants to merge ").foregroundStyle(.secondary)
+      + Text(commitsCount, format: .number).foregroundStyle(.secondary)
+      + Text(" \(commitsLabel) into ").foregroundStyle(.secondary)
+      + Text("`\(baseRefName)`").foregroundStyle(.secondary).monospaced()
+      + Text(" from ").foregroundStyle(.secondary)
+      + Text("`\(headRefName)`").foregroundStyle(.secondary).monospaced()
+    let additionsText = Text("+") + Text(pullRequest.additions, format: .number)
+    let deletionsText = Text("-") + Text(pullRequest.deletions, format: .number)
+    let hasConflicts = PullRequestStatus.hasConflicts(
+      mergeable: pullRequest.mergeable,
+      mergeStateStatus: pullRequest.mergeStateStatus
+    )
     ScrollView {
       VStack(alignment: .leading) {
         if let pullRequestURL {
@@ -32,14 +58,35 @@ struct PullRequestChecksPopoverView: View {
             analyticsClient.capture("github_pr_opened", nil)
             openURL(pullRequestURL)
           } label: {
-            Text("\(pullRequestTitle ?? "Open pull request on GitHub") ↗")
+            titleLine
               .lineLimit(1)
           }
           .buttonStyle(.plain)
+          .focusable(false)
           .help("Open pull request on GitHub (\(AppShortcuts.openPullRequest.display))")
           .keyboardShortcut(AppShortcuts.openPullRequest.keyboardShortcut)
           .font(.headline)
+        } else {
+          titleLine
+            .lineLimit(1)
+            .font(.headline)
         }
+        summaryLine
+          .font(.subheadline)
+          .lineLimit(1)
+        HStack {
+          additionsText
+            .foregroundStyle(.green)
+          deletionsText
+            .foregroundStyle(.red)
+          if hasConflicts {
+            Text("•")
+              .foregroundStyle(.secondary)
+            Text("Merge Conflicts")
+              .foregroundStyle(.red)
+          }
+        }
+        .font(.subheadline)
 
         if breakdown.total > 0 {
           HStack {
@@ -68,6 +115,7 @@ struct PullRequestChecksPopoverView: View {
                       .lineLimit(1)
                   }
                   .buttonStyle(.plain)
+                  .focusable(false)
                   .help("Open check details on GitHub")
                 } else {
                   Text(check.displayName)

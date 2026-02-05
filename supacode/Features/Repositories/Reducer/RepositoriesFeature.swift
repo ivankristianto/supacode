@@ -1,3 +1,4 @@
+import AppKit
 import ComposableArchitecture
 import Foundation
 import IdentifiedCollections
@@ -102,6 +103,7 @@ struct RepositoriesFeature {
     case worktreePullRequestLoaded(worktreeID: Worktree.ID, pullRequest: GithubPullRequest?)
     case setGithubIntegrationEnabled(Bool)
     case setAutomaticallyArchiveMergedWorktrees(Bool)
+    case pullRequestAction(Worktree.ID, PullRequestAction)
     case openRepositorySettings(Repository.ID)
     case alert(PresentationAction<Alert>)
     case delegate(Delegate)
@@ -123,6 +125,15 @@ struct RepositoriesFeature {
     case confirmArchiveWorktree(Worktree.ID, Repository.ID)
     case confirmDeleteWorktree(Worktree.ID, Repository.ID)
     case confirmRemoveRepository(Repository.ID)
+  }
+
+  enum PullRequestAction: Equatable {
+    case openOnGithub
+    case markReadyForReview
+    case merge
+    case copyCiFailureLogs
+    case rerunFailedJobs
+    case openFailingCheckDetails
   }
 
   @CasePathable
@@ -324,7 +335,7 @@ struct RepositoriesFeature {
         )
         if !invalidRoots.isEmpty {
           let message = invalidRoots.map { "\($0) is not a Git repository." }.joined(separator: "\n")
-          state.alert = errorAlert(
+          state.alert = messageAlert(
             title: "Some folders couldn't be opened",
             message: message
           )
@@ -386,14 +397,14 @@ struct RepositoriesFeature {
         guard let worktree = state.worktree(for: worktreeID) else { return .none }
         let trimmed = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-          state.alert = errorAlert(
+          state.alert = messageAlert(
             title: "Branch name required",
             message: "Enter a branch name to rename."
           )
           return .none
         }
         guard !trimmed.contains(where: \.isWhitespace) else {
-          state.alert = errorAlert(
+          state.alert = messageAlert(
             title: "Branch name invalid",
             message: "Branch names can't contain spaces."
           )
@@ -427,21 +438,21 @@ struct RepositoriesFeature {
           } else {
             message = "Unable to resolve a repository for the new worktree."
           }
-          state.alert = errorAlert(title: "Unable to create worktree", message: message)
+          state.alert = messageAlert(title: "Unable to create worktree", message: message)
           return .none
         }
         return .send(.createRandomWorktreeInRepository(repository.id))
 
       case .createRandomWorktreeInRepository(let repositoryID):
         guard let repository = state.repositories[id: repositoryID] else {
-          state.alert = errorAlert(
+          state.alert = messageAlert(
             title: "Unable to create worktree",
             message: "Unable to resolve a repository for the new worktree."
           )
           return .none
         }
         if state.removingRepositoryIDs.contains(repository.id) {
-          state.alert = errorAlert(
+          state.alert = messageAlert(
             title: "Unable to create worktree",
             message: "This repository is being removed."
           )
@@ -561,7 +572,7 @@ struct RepositoriesFeature {
           name: name,
           state: &state
         )
-        state.alert = errorAlert(title: title, message: message)
+        state.alert = messageAlert(title: title, message: message)
         let selectedWorktree = state.worktree(for: state.selectedWorktreeID)
         let selectionChanged = selectionDidChange(
           previousSelectionID: previousSelection,
@@ -939,7 +950,7 @@ struct RepositoriesFeature {
 
       case .deleteWorktreeFailed(let message, let worktreeID):
         state.deletingWorktreeIDs.remove(worktreeID)
-        state.alert = errorAlert(title: "Unable to delete worktree", message: message)
+        state.alert = messageAlert(title: "Unable to delete worktree", message: message)
         return .none
 
       case .requestRemoveRepository(let repositoryID):
@@ -1110,7 +1121,7 @@ struct RepositoriesFeature {
         return .merge(effects)
 
       case .presentAlert(let title, let message):
-        state.alert = errorAlert(title: title, message: message)
+        state.alert = messageAlert(title: title, message: message)
         return .none
 
       case .worktreeNotificationReceived(let worktreeID):
@@ -1249,6 +1260,224 @@ struct RepositoriesFeature {
           return .send(.archiveWorktreeConfirmed(worktreeID, repositoryID))
         }
         return .none
+
+      case .pullRequestAction(let worktreeID, let action):
+        guard let worktree = state.worktree(for: worktreeID),
+          let pullRequest = state.worktreeInfo(for: worktreeID)?.pullRequest
+        else {
+          return .send(
+            .presentAlert(
+              title: "Pull request not available",
+              message: "Supacode could not find a pull request for this worktree."
+            )
+          )
+        }
+        let repoRoot = worktree.repositoryRootURL
+        let worktreeRoot = worktree.workingDirectory
+        let branchName = pullRequest.headRefName ?? worktree.name
+        switch action {
+        case .openOnGithub:
+          guard let url = URL(string: pullRequest.url) else {
+            return .send(
+              .presentAlert(
+                title: "Invalid pull request URL",
+                message: "Supacode could not open the pull request URL."
+              )
+            )
+          }
+          return .run { @MainActor _ in
+            NSWorkspace.shared.open(url)
+          }
+
+        case .openFailingCheckDetails:
+          let checks = pullRequest.statusCheckRollup?.checks ?? []
+          let detailsUrl = checks.first {
+            $0.checkState == .failure && $0.detailsUrl != nil
+          }?.detailsUrl
+          guard let detailsUrl, let url = URL(string: detailsUrl) else {
+            return .send(
+              .presentAlert(
+                title: "Failing check not found",
+                message: "Supacode could not find a failing check with details."
+              )
+            )
+          }
+          return .run { @MainActor _ in
+            NSWorkspace.shared.open(url)
+          }
+
+        case .markReadyForReview:
+          let githubCLI = githubCLI
+          let githubIntegration = githubIntegration
+          return .run { send in
+            guard await githubIntegration.isAvailable() else {
+              await send(
+                .presentAlert(
+                  title: "GitHub integration unavailable",
+                  message: "Enable GitHub integration to mark a pull request as ready."
+                )
+              )
+              return
+            }
+            do {
+              try await githubCLI.markPullRequestReady(worktreeRoot, pullRequest.number)
+              await send(
+                .presentAlert(
+                  title: "Pull request marked ready",
+                  message: "Supacode marked this pull request as ready for review."
+                )
+              )
+            } catch {
+              await send(
+                .presentAlert(
+                  title: "Failed to mark pull request ready",
+                  message: error.localizedDescription
+                )
+              )
+            }
+          }
+
+        case .merge:
+          let githubCLI = githubCLI
+          let githubIntegration = githubIntegration
+          return .run { send in
+            guard await githubIntegration.isAvailable() else {
+              await send(
+                .presentAlert(
+                  title: "GitHub integration unavailable",
+                  message: "Enable GitHub integration to merge a pull request."
+                )
+              )
+              return
+            }
+            @Shared(.repositorySettings(repoRoot)) var repositorySettings
+            let strategy = repositorySettings.pullRequestMergeStrategy
+            do {
+              try await githubCLI.mergePullRequest(worktreeRoot, pullRequest.number, strategy)
+              await send(
+                .presentAlert(
+                  title: "Pull request merged",
+                  message: "Supacode merged this pull request."
+                )
+              )
+            } catch {
+              await send(
+                .presentAlert(
+                  title: "Failed to merge pull request",
+                  message: error.localizedDescription
+                )
+              )
+            }
+          }
+
+        case .copyCiFailureLogs:
+          let githubCLI = githubCLI
+          let githubIntegration = githubIntegration
+          return .run { send in
+            guard await githubIntegration.isAvailable() else {
+              await send(
+                .presentAlert(
+                  title: "GitHub integration unavailable",
+                  message: "Enable GitHub integration to copy CI failure logs."
+                )
+              )
+              return
+            }
+            guard !branchName.isEmpty else {
+              await send(
+                .presentAlert(
+                  title: "Branch name unavailable",
+                  message: "Supacode could not determine the pull request branch."
+                )
+              )
+              return
+            }
+            do {
+              guard let run = try await githubCLI.latestRun(worktreeRoot, branchName) else {
+                await send(
+                  .presentAlert(
+                    title: "No workflow runs found",
+                    message: "Supacode could not find any workflow runs for this branch."
+                  )
+                )
+                return
+              }
+              guard run.conclusion?.lowercased() == "failure" else {
+                await send(
+                  .presentAlert(
+                    title: "No failing workflow run",
+                    message: "Supacode could not find a failing workflow run to copy logs from."
+                  )
+                )
+                return
+              }
+              let logs = try await githubCLI.failedRunLogs(worktreeRoot, run.databaseId)
+              await MainActor.run {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(logs, forType: .string)
+              }
+            } catch {
+              await send(
+                .presentAlert(
+                  title: "Failed to copy CI failure logs",
+                  message: error.localizedDescription
+                )
+              )
+            }
+          }
+
+        case .rerunFailedJobs:
+          let githubCLI = githubCLI
+          let githubIntegration = githubIntegration
+          return .run { send in
+            guard await githubIntegration.isAvailable() else {
+              await send(
+                .presentAlert(
+                  title: "GitHub integration unavailable",
+                  message: "Enable GitHub integration to re-run failed jobs."
+                )
+              )
+              return
+            }
+            guard !branchName.isEmpty else {
+              await send(
+                .presentAlert(
+                  title: "Branch name unavailable",
+                  message: "Supacode could not determine the pull request branch."
+                )
+              )
+              return
+            }
+            do {
+              guard let run = try await githubCLI.latestRun(worktreeRoot, branchName) else {
+                await send(
+                  .presentAlert(
+                    title: "No workflow runs found",
+                    message: "Supacode could not find any workflow runs for this branch."
+                  )
+                )
+                return
+              }
+              guard run.conclusion?.lowercased() == "failure" else {
+                await send(
+                  .presentAlert(
+                    title: "No failing workflow run",
+                    message: "Supacode could not find a failing workflow run to re-run."
+                  )
+                )
+                return
+              }
+              try await githubCLI.rerunFailedJobs(worktreeRoot, run.databaseId)
+            } catch {
+              await send(
+                .presentAlert(
+                  title: "Failed to re-run failed jobs",
+                  message: error.localizedDescription
+                )
+              )
+            }
+          }
+        }
 
       case .setGithubIntegrationEnabled(let isEnabled):
         guard !isEnabled else {
@@ -1414,7 +1643,7 @@ struct RepositoriesFeature {
     )
   }
 
-  private func errorAlert(title: String, message: String) -> AlertState<Alert> {
+  private func messageAlert(title: String, message: String) -> AlertState<Alert> {
     AlertState {
       TextState(title)
     } actions: {
@@ -1638,10 +1867,8 @@ extension RepositoriesFeature.State {
   }
 
   func repositoryID(containing worktreeID: Worktree.ID) -> Repository.ID? {
-    for repository in repositories {
-      if repository.worktrees[id: worktreeID] != nil {
-        return repository.id
-      }
+    for repository in repositories where repository.worktrees[id: worktreeID] != nil {
+      return repository.id
     }
     return nil
   }

@@ -14,6 +14,14 @@ final class WorktreeInfoWatcherManager {
     let task: Task<Void, Never>
   }
 
+  private struct RepeatingTaskRequest {
+    let worktreeID: Worktree.ID
+    let interval: Duration
+    let immediate: Bool
+    let forceReschedule: Bool
+    let makeEvent: (Worktree.ID) -> WorktreeInfoWatcherClient.Event
+  }
+
   private struct RefreshTiming: Equatable {
     let focused: Duration
     let unfocused: Duration
@@ -354,45 +362,43 @@ final class WorktreeInfoWatcherManager {
     }
     let interval = worktreeID == selectedWorktreeID ? refreshTiming.focused : refreshTiming.unfocused
     let shouldEmit = immediate && !deferredLineChangeIDs.contains(worktreeID)
-    updateRepeatingTask(
+    let request = RepeatingTaskRequest(
       worktreeID: worktreeID,
       interval: interval,
       immediate: shouldEmit,
       forceReschedule: forceReschedule,
-      tasks: &lineChangeTasks
-    ) { [weak self] worktreeID in
-      self?.deferredLineChangeIDs.remove(worktreeID)
-      return .filesChanged(worktreeID: worktreeID)
-    }
+      makeEvent: { [weak self] worktreeID in
+        self?.deferredLineChangeIDs.remove(worktreeID)
+        return .filesChanged(worktreeID: worktreeID)
+      }
+    )
+    updateRepeatingTask(request, tasks: &lineChangeTasks)
   }
 
   private func updateRepeatingTask(
-    worktreeID: Worktree.ID,
-    interval: Duration,
-    immediate: Bool,
-    forceReschedule: Bool,
-    tasks: inout [Worktree.ID: RefreshTask],
-    makeEvent: @escaping (Worktree.ID) -> WorktreeInfoWatcherClient.Event
+    _ request: RepeatingTaskRequest,
+    tasks: inout [Worktree.ID: RefreshTask]
   ) {
-    if let existing = tasks[worktreeID], existing.interval == interval, !forceReschedule {
-      if immediate {
-        emit(makeEvent(worktreeID))
+    let worktreeID = request.worktreeID
+    if let existing = tasks[worktreeID], existing.interval == request.interval, !request.forceReschedule {
+      if request.immediate {
+        emit(request.makeEvent(worktreeID))
       }
       return
     }
     tasks[worktreeID]?.task.cancel()
-    if immediate {
-      emit(makeEvent(worktreeID))
+    if request.immediate {
+      emit(request.makeEvent(worktreeID))
     }
     let task = Task { [weak self] in
       while !Task.isCancelled {
-        try? await Task.sleep(for: interval)
+        try? await Task.sleep(for: request.interval)
         await MainActor.run {
-          self?.emit(makeEvent(worktreeID))
+          self?.emit(request.makeEvent(worktreeID))
         }
       }
     }
-    tasks[worktreeID] = RefreshTask(interval: interval, task: task)
+    tasks[worktreeID] = RefreshTask(interval: request.interval, task: task)
   }
 
   private func emit(_ event: WorktreeInfoWatcherClient.Event) {

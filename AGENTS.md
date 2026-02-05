@@ -96,6 +96,7 @@ Always read `./docs/swift-rules.md` before writing Swift code. Key points:
 - Prefer Swift-native APIs over Foundation where they exist (e.g., `replacing()` not `replacingOccurrences()`)
 - Avoid `GeometryReader` when `containerRelativeFrame()` or `visualEffect()` would work
 - Do not use NSNotification to communicate between reducers.
+- Prefer `@Shared` directly in reducers for app storage and shared settings; do not introduce new dependency clients solely to wrap `@Shared`.
 
 ## UX Standards
 

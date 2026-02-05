@@ -4,7 +4,7 @@ import Foundation
 
 nonisolated struct ShellClient {
   var run: @Sendable (URL, [String], URL?) async throws -> ShellOutput
-  var _runLogin: @Sendable (URL, [String], URL?, Bool) async throws -> ShellOutput
+  var runLoginImpl: @Sendable (URL, [String], URL?, Bool) async throws -> ShellOutput
 
   func runLogin(
     _ executableURL: URL,
@@ -12,7 +12,7 @@ nonisolated struct ShellClient {
     _ currentDirectoryURL: URL?,
     log: Bool = true
   ) async throws -> ShellOutput {
-    try await _runLogin(executableURL, arguments, currentDirectoryURL, log)
+    try await runLoginImpl(executableURL, arguments, currentDirectoryURL, log)
   }
 }
 
@@ -25,15 +25,15 @@ extension ShellClient: DependencyKey {
         currentDirectoryURL: currentDirectoryURL
       )
     },
-    _runLogin: { executableURL, arguments, currentDirectoryURL, log in
+    runLoginImpl: { executableURL, arguments, currentDirectoryURL, log in
       let shellURL = URL(fileURLWithPath: defaultShellPath())
       let execCommand = shellExecCommand(for: shellURL)
       let shellArguments =
         ["-l", "-c", execCommand, "--", executableURL.path(percentEncoded: false)] + arguments
       if log {
-        print(
-          "[Shell] runLogin\n\tcwd: \(currentDirectoryURL?.path(percentEncoded: false) ?? "nil")\n\tcmd: \(shellURL.path) \(shellArguments.joined(separator: " "))"
-        )
+        let cwd = currentDirectoryURL?.path(percentEncoded: false) ?? "nil"
+        let cmd = shellArguments.joined(separator: " ")
+        print("[Shell] runLogin\n\tcwd: \(cwd)\n\tcmd: \(shellURL.path) \(cmd)")
       }
       let result = try await runProcess(
         executableURL: shellURL,
@@ -46,7 +46,7 @@ extension ShellClient: DependencyKey {
 
   static let testValue = ShellClient(
     run: { _, _, _ in ShellOutput(stdout: "", stderr: "", exitCode: 0) },
-    _runLogin: { _, _, _, _ in ShellOutput(stdout: "", stderr: "", exitCode: 0) }
+    runLoginImpl: { _, _, _, _ in ShellOutput(stdout: "", stderr: "", exitCode: 0) }
   )
 }
 

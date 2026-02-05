@@ -263,6 +263,7 @@ private struct SearchButtonLabel: View {
       Text("\(title) \(Text("(\(shortcut))").foregroundColor(.secondary.opacity(0.7)))")
     } icon: {
       Image(systemName: systemImage)
+        .accessibilityHidden(true)
     }
   }
 }

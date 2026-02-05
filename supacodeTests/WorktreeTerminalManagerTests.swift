@@ -78,10 +78,8 @@ struct WorktreeTerminalManagerTests {
     _ stream: AsyncStream<TerminalClient.Event>,
     matching predicate: (TerminalClient.Event) -> Bool
   ) async -> TerminalClient.Event? {
-    for await event in stream {
-      if predicate(event) {
-        return event
-      }
+    for await event in stream where predicate(event) {
+      return event
     }
     return nil
   }

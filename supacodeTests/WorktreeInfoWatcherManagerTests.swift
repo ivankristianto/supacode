@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct WorktreeInfoWatcherManagerTests {
   @Test func defersLineChangesUntilSchedule() async throws {
-    let (worktree, tempRoot, _) = try makeTempWorktree()
+    let tempWorktree = try makeTempWorktree()
     let manager = WorktreeInfoWatcherManager(
       focusedInterval: .milliseconds(50),
       unfocusedInterval: .milliseconds(50)
@@ -14,17 +14,17 @@ struct WorktreeInfoWatcherManagerTests {
     let (collector, task) = startCollecting(manager.eventStream())
 
     manager.handleCommand(.setPullRequestTrackingEnabled(false))
-    manager.handleCommand(.setWorktrees([worktree]))
-    manager.handleCommand(.setSelectedWorktreeID(worktree.id))
+    manager.handleCommand(.setWorktrees([tempWorktree.worktree]))
+    manager.handleCommand(.setSelectedWorktreeID(tempWorktree.worktree.id))
 
     try? await Task.sleep(for: .milliseconds(20))
-    let earlyHasFilesChanged = await collector.hasFilesChanged(worktreeID: worktree.id)
+    let earlyHasFilesChanged = await collector.hasFilesChanged(worktreeID: tempWorktree.worktree.id)
     #expect(earlyHasFilesChanged == false)
 
     #expect(
       await waitForFilesChangedCount(
         collector,
-        worktreeID: worktree.id,
+        worktreeID: tempWorktree.worktree.id,
         count: 1,
         timeout: .seconds(1)
       )
@@ -32,7 +32,7 @@ struct WorktreeInfoWatcherManagerTests {
 
     manager.handleCommand(.stop)
     await task.value
-    try FileManager.default.removeItem(at: tempRoot)
+    try FileManager.default.removeItem(at: tempWorktree.tempRoot)
   }
 }
 
@@ -57,7 +57,13 @@ actor EventCollector {
 
 }
 
-private func makeTempWorktree() throws -> (Worktree, URL, URL) {
+private struct TempWorktree {
+  let worktree: Worktree
+  let tempRoot: URL
+  let headURL: URL
+}
+
+private func makeTempWorktree() throws -> TempWorktree {
   let fileManager = FileManager.default
   let tempRoot = fileManager.temporaryDirectory.appending(path: UUID().uuidString)
   let worktreeDirectory = tempRoot.appending(path: "wt")
@@ -72,7 +78,7 @@ private func makeTempWorktree() throws -> (Worktree, URL, URL) {
     workingDirectory: worktreeDirectory,
     repositoryRootURL: tempRoot
   )
-  return (worktree, tempRoot, headURL)
+  return TempWorktree(worktree: worktree, tempRoot: tempRoot, headURL: headURL)
 }
 
 private func startCollecting(

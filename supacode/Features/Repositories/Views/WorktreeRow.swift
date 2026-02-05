@@ -30,8 +30,6 @@ struct WorktreeRow: View {
     let hasInfo = displayAddedLines != nil || displayRemovedLines != nil
     let pullRequestState = displayPullRequest?.state.uppercased()
     let pullRequestNumber = displayPullRequest?.number
-    let pullRequestURL = displayPullRequest.flatMap { URL(string: $0.url) }
-    let pullRequestTitle = displayPullRequest?.title
     let pullRequestChecks = displayPullRequest?.statusCheckRollup?.checks ?? []
     let archiveShortcut = KeyboardShortcut(.delete, modifiers: .command).display
     let pullRequestBadgeStyle = PullRequestBadgeStyle.style(
@@ -82,11 +80,9 @@ struct WorktreeRow: View {
           .help("Run script active")
           .accessibilityLabel("Run script active")
       }
-      if let pullRequestBadgeStyle, !showsMergedArchiveAction {
+      if let pullRequestBadgeStyle, let displayPullRequest, !showsMergedArchiveAction {
         PullRequestChecksPopoverButton(
-          checks: pullRequestChecks,
-          pullRequestURL: pullRequestURL,
-          pullRequestTitle: pullRequestTitle
+          pullRequest: displayPullRequest
         ) {
           let breakdown = PullRequestCheckBreakdown(checks: pullRequestChecks)
           let showsChecksRing = breakdown.total > 0 && pullRequestState != "MERGED"
@@ -97,7 +93,6 @@ struct WorktreeRow: View {
             PullRequestBadgeView(text: pullRequestBadgeStyle.text, color: pullRequestBadgeStyle.color)
           }
         }
-        .help("Show pull request checks")
       }
       if let archiveAction, pullRequestState == "MERGED" {
         Button {

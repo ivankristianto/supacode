@@ -400,9 +400,9 @@ final class GhosttySurfaceView: NSView, Identifiable {
       font.release()
     }
 
-    let pt = NSPoint(x: text.tl_px_x, y: frame.size.height - text.tl_px_y)
     let str = NSAttributedString(string: String(cString: text.text), attributes: attributes)
-    showDefinition(for: str, at: pt)
+    let point = NSPoint(x: text.tl_px_x, y: frame.size.height - text.tl_px_y)
+    showDefinition(for: str, at: point)
   }
 
   private func localEventHandler(_ event: NSEvent) -> NSEvent? {

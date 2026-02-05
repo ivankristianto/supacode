@@ -13,64 +13,73 @@ struct WorktreeRowsView: View {
 
   var body: some View {
     if isExpanded {
-      let state = store.state
-      let sections = state.worktreeRowSections(in: repository)
-      let isRepositoryRemoving = state.isRemovingRepository(repository)
-      let showShortcutHints = commandKeyObserver.isPressed
-      let allRows = showShortcutHints ? state.orderedWorktreeRows() : []
-      let shortcutIndexByID = Dictionary(
-        uniqueKeysWithValues: allRows.enumerated().map { ($0.element.id, $0.offset) }
+      expandedRowsView
+    }
+  }
+
+  private var expandedRowsView: some View {
+    let state = store.state
+    let sections = state.worktreeRowSections(in: repository)
+    let isRepositoryRemoving = state.isRemovingRepository(repository)
+    let showShortcutHints = commandKeyObserver.isPressed
+    let allRows = showShortcutHints ? state.orderedWorktreeRows() : []
+    let shortcutIndexByID = Dictionary(
+      uniqueKeysWithValues: allRows.enumerated().map { ($0.element.id, $0.offset) }
+    )
+    let rowIDs = sections.allRows.map(\.id)
+    return rowsGroup(
+      sections: sections,
+      isRepositoryRemoving: isRepositoryRemoving,
+      showShortcutHints: showShortcutHints,
+      shortcutIndexByID: shortcutIndexByID
+    )
+    .animation(.easeOut(duration: 0.2), value: rowIDs)
+  }
+
+  @ViewBuilder
+  private func rowsGroup(
+    sections: WorktreeRowSections,
+    isRepositoryRemoving: Bool,
+    showShortcutHints: Bool,
+    shortcutIndexByID: [Worktree.ID: Int]
+  ) -> some View {
+    if let row = sections.main {
+      rowView(
+        row,
+        isRepositoryRemoving: isRepositoryRemoving,
+        moveDisabled: true,
+        shortcutHint: showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
       )
-      let rowIDs = sections.allRows.map(\.id)
-      Group {
-        if let row = sections.main {
-          let shortcutHint =
-            showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
-          rowView(
-            row,
-            isRepositoryRemoving: isRepositoryRemoving,
-            moveDisabled: true,
-            shortcutHint: shortcutHint
-          )
-        }
-        ForEach(sections.pinned) { row in
-          let shortcutHint =
-            showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
-          rowView(
-            row,
-            isRepositoryRemoving: isRepositoryRemoving,
-            moveDisabled: isRepositoryRemoving || row.isDeleting,
-            shortcutHint: shortcutHint
-          )
-        }
-        .onMove { offsets, destination in
-          store.send(.pinnedWorktreesMoved(repositoryID: repository.id, offsets, destination))
-        }
-        ForEach(sections.pending) { row in
-          let shortcutHint =
-            showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
-          rowView(
-            row,
-            isRepositoryRemoving: isRepositoryRemoving,
-            moveDisabled: true,
-            shortcutHint: shortcutHint
-          )
-        }
-        ForEach(sections.unpinned) { row in
-          let shortcutHint =
-            showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
-          rowView(
-            row,
-            isRepositoryRemoving: isRepositoryRemoving,
-            moveDisabled: isRepositoryRemoving || row.isDeleting,
-            shortcutHint: shortcutHint
-          )
-        }
-        .onMove { offsets, destination in
-          store.send(.unpinnedWorktreesMoved(repositoryID: repository.id, offsets, destination))
-        }
-      }
-      .animation(.easeOut(duration: 0.2), value: rowIDs)
+    }
+    ForEach(sections.pinned) { row in
+      rowView(
+        row,
+        isRepositoryRemoving: isRepositoryRemoving,
+        moveDisabled: isRepositoryRemoving || row.isDeleting,
+        shortcutHint: showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
+      )
+    }
+    .onMove { offsets, destination in
+      store.send(.pinnedWorktreesMoved(repositoryID: repository.id, offsets, destination))
+    }
+    ForEach(sections.pending) { row in
+      rowView(
+        row,
+        isRepositoryRemoving: isRepositoryRemoving,
+        moveDisabled: true,
+        shortcutHint: showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
+      )
+    }
+    ForEach(sections.unpinned) { row in
+      rowView(
+        row,
+        isRepositoryRemoving: isRepositoryRemoving,
+        moveDisabled: isRepositoryRemoving || row.isDeleting,
+        shortcutHint: showShortcutHints ? worktreeShortcutHint(for: shortcutIndexByID[row.id]) : nil
+      )
+    }
+    .onMove { offsets, destination in
+      store.send(.unpinnedWorktreesMoved(repositoryID: repository.id, offsets, destination))
     }
   }
 
@@ -81,94 +90,28 @@ struct WorktreeRowsView: View {
     moveDisabled: Bool,
     shortcutHint: String?
   ) -> some View {
-    let taskStatus = terminalManager.focusedTaskStatus(for: row.id)
-    let isRunScriptRunning = terminalManager.isRunScriptRunning(for: row.id)
     let isSelected = row.id == store.state.selectedWorktreeID
     let showsNotificationIndicator = !isSelected && terminalManager.hasUnseenNotifications(for: row.id)
     let displayName = row.isDeleting ? "\(row.name) (deleting...)" : row.name
-    let archiveShortcut = KeyboardShortcut(.delete, modifiers: .command).display
-    let deleteShortcut = KeyboardShortcut(.delete, modifiers: [.command, .shift]).display
     let archiveAction: (() -> Void)? =
       row.isRemovable && !row.isMainWorktree && !isRepositoryRemoving
       ? { store.send(.requestArchiveWorktree(row.id, repository.id)) }
       : nil
+    let config = WorktreeRowViewConfig(
+      displayName: displayName,
+      showsNotificationIndicator: showsNotificationIndicator,
+      shortcutHint: shortcutHint,
+      archiveAction: archiveAction,
+      moveDisabled: moveDisabled
+    )
+    let baseRow = worktreeRowView(row, config: config)
     Group {
       if row.isRemovable, let worktree = store.state.worktree(for: row.id), !isRepositoryRemoving {
-        WorktreeRow(
-          name: displayName,
-          info: row.info,
-          showsPullRequestInfo: !draggingWorktreeIDs.contains(row.id),
-          isPinned: row.isPinned,
-          isMainWorktree: row.isMainWorktree,
-          isLoading: row.isPending || row.isDeleting,
-          taskStatus: taskStatus,
-          isRunScriptRunning: isRunScriptRunning,
-          showsNotificationIndicator: showsNotificationIndicator,
-          shortcutHint: shortcutHint,
-          archiveAction: archiveAction
-        )
-        .tag(SidebarSelection.worktree(row.id))
-        .typeSelectEquivalent("")
-        .listRowInsets(EdgeInsets())
-        .transition(.opacity)
-        .moveDisabled(moveDisabled)
-        .contextMenu {
-          if !row.isMainWorktree {
-            if row.isPinned {
-              Button("Unpin") {
-                store.send(.unpinWorktree(worktree.id))
-              }
-              .help("Unpin")
-            } else {
-              Button("Pin to top") {
-                store.send(.pinWorktree(worktree.id))
-              }
-              .help("Pin to top")
-            }
-          }
-          Button("Copy Path") {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(worktree.workingDirectory.path, forType: .string)
-          }
-          Button("Archive Worktree (\(archiveShortcut))") {
-            store.send(.requestArchiveWorktree(worktree.id, repository.id))
-          }
-          .help(
-            row.isMainWorktree
-              ? "Main worktree can't be archived"
-              : "Archive Worktree (\(archiveShortcut))"
-          )
-          .disabled(row.isMainWorktree)
-          Button("Delete Worktree (\(deleteShortcut))", role: .destructive) {
-            store.send(.requestDeleteWorktree(worktree.id, repository.id))
-          }
-          .help(
-            row.isMainWorktree
-              ? "Main worktree can't be deleted"
-              : "Delete Worktree (\(deleteShortcut))"
-          )
-          .disabled(row.isMainWorktree)
+        baseRow.contextMenu {
+          rowContextMenu(worktree: worktree, row: row)
         }
       } else {
-        WorktreeRow(
-          name: displayName,
-          info: row.info,
-          showsPullRequestInfo: !draggingWorktreeIDs.contains(row.id),
-          isPinned: row.isPinned,
-          isMainWorktree: row.isMainWorktree,
-          isLoading: row.isPending || row.isDeleting,
-          taskStatus: taskStatus,
-          isRunScriptRunning: isRunScriptRunning,
-          showsNotificationIndicator: showsNotificationIndicator,
-          shortcutHint: shortcutHint,
-          archiveAction: archiveAction
-        )
-        .tag(SidebarSelection.worktree(row.id))
-        .typeSelectEquivalent("")
-        .listRowInsets(EdgeInsets())
-        .transition(.opacity)
-        .moveDisabled(moveDisabled)
-        .disabled(isRepositoryRemoving)
+        baseRow.disabled(isRepositoryRemoving)
       }
     }
     .contentShape(.dragPreview, .rect)
@@ -192,6 +135,78 @@ struct WorktreeRowsView: View {
         draggingWorktreeIDs = draggedIDs
       }
     }
+  }
+
+  private struct WorktreeRowViewConfig {
+    let displayName: String
+    let showsNotificationIndicator: Bool
+    let shortcutHint: String?
+    let archiveAction: (() -> Void)?
+    let moveDisabled: Bool
+  }
+
+  private func worktreeRowView(_ row: WorktreeRowModel, config: WorktreeRowViewConfig) -> some View {
+    let taskStatus = terminalManager.focusedTaskStatus(for: row.id)
+    let isRunScriptRunning = terminalManager.isRunScriptRunning(for: row.id)
+    return WorktreeRow(
+      name: config.displayName,
+      info: row.info,
+      showsPullRequestInfo: !draggingWorktreeIDs.contains(row.id),
+      isPinned: row.isPinned,
+      isMainWorktree: row.isMainWorktree,
+      isLoading: row.isPending || row.isDeleting,
+      taskStatus: taskStatus,
+      isRunScriptRunning: isRunScriptRunning,
+      showsNotificationIndicator: config.showsNotificationIndicator,
+      shortcutHint: config.shortcutHint,
+      archiveAction: config.archiveAction
+    )
+    .tag(SidebarSelection.worktree(row.id))
+    .typeSelectEquivalent("")
+    .listRowInsets(EdgeInsets())
+    .transition(.opacity)
+    .moveDisabled(config.moveDisabled)
+  }
+
+  @ViewBuilder
+  private func rowContextMenu(worktree: Worktree, row: WorktreeRowModel) -> some View {
+    let archiveShortcut = KeyboardShortcut(.delete, modifiers: .command).display
+    let deleteShortcut = KeyboardShortcut(.delete, modifiers: [.command, .shift]).display
+    if !row.isMainWorktree {
+      if row.isPinned {
+        Button("Unpin") {
+          store.send(.unpinWorktree(worktree.id))
+        }
+        .help("Unpin")
+      } else {
+        Button("Pin to top") {
+          store.send(.pinWorktree(worktree.id))
+        }
+        .help("Pin to top")
+      }
+    }
+    Button("Copy Path") {
+      NSPasteboard.general.clearContents()
+      NSPasteboard.general.setString(worktree.workingDirectory.path, forType: .string)
+    }
+    Button("Archive Worktree (\(archiveShortcut))") {
+      store.send(.requestArchiveWorktree(worktree.id, repository.id))
+    }
+    .help(
+      row.isMainWorktree
+        ? "Main worktree can't be archived"
+        : "Archive Worktree (\(archiveShortcut))"
+    )
+    .disabled(row.isMainWorktree)
+    Button("Delete Worktree (\(deleteShortcut))", role: .destructive) {
+      store.send(.requestDeleteWorktree(worktree.id, repository.id))
+    }
+    .help(
+      row.isMainWorktree
+        ? "Main worktree can't be deleted"
+        : "Delete Worktree (\(deleteShortcut))"
+    )
+    .disabled(row.isMainWorktree)
   }
 
   private func worktreeShortcutHint(for index: Int?) -> String? {

@@ -22,6 +22,10 @@ struct AppShortcut {
     return parts.joined()
   }
 
+  var displaySymbols: [String] {
+    display.map { String($0) }
+  }
+
   private var ghosttyModifierParts: [String] {
     var parts: [String] = []
     if modifiers.contains(.control) { parts.append("ctrl") }

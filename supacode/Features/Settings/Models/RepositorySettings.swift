@@ -7,6 +7,7 @@ nonisolated struct RepositorySettings: Codable, Equatable, Sendable {
   var worktreeBaseRef: String?
   var copyIgnoredOnWorktreeCreate: Bool
   var copyUntrackedOnWorktreeCreate: Bool
+  var pullRequestMergeStrategy: PullRequestMergeStrategy
 
   private enum CodingKeys: String, CodingKey {
     case setupScript
@@ -15,6 +16,7 @@ nonisolated struct RepositorySettings: Codable, Equatable, Sendable {
     case worktreeBaseRef
     case copyIgnoredOnWorktreeCreate
     case copyUntrackedOnWorktreeCreate
+    case pullRequestMergeStrategy
   }
 
   static let `default` = RepositorySettings(
@@ -23,7 +25,8 @@ nonisolated struct RepositorySettings: Codable, Equatable, Sendable {
     openActionID: OpenWorktreeAction.automaticSettingsID,
     worktreeBaseRef: nil,
     copyIgnoredOnWorktreeCreate: false,
-    copyUntrackedOnWorktreeCreate: false
+    copyUntrackedOnWorktreeCreate: false,
+    pullRequestMergeStrategy: .merge
   )
 
   init(
@@ -32,7 +35,8 @@ nonisolated struct RepositorySettings: Codable, Equatable, Sendable {
     openActionID: String,
     worktreeBaseRef: String?,
     copyIgnoredOnWorktreeCreate: Bool,
-    copyUntrackedOnWorktreeCreate: Bool
+    copyUntrackedOnWorktreeCreate: Bool,
+    pullRequestMergeStrategy: PullRequestMergeStrategy
   ) {
     self.setupScript = setupScript
     self.runScript = runScript
@@ -40,6 +44,7 @@ nonisolated struct RepositorySettings: Codable, Equatable, Sendable {
     self.worktreeBaseRef = worktreeBaseRef
     self.copyIgnoredOnWorktreeCreate = copyIgnoredOnWorktreeCreate
     self.copyUntrackedOnWorktreeCreate = copyUntrackedOnWorktreeCreate
+    self.pullRequestMergeStrategy = pullRequestMergeStrategy
   }
 
   init(from decoder: Decoder) throws {
@@ -65,5 +70,10 @@ nonisolated struct RepositorySettings: Codable, Equatable, Sendable {
         Bool.self,
         forKey: .copyUntrackedOnWorktreeCreate
       ) ?? Self.default.copyUntrackedOnWorktreeCreate
+    pullRequestMergeStrategy =
+      try container.decodeIfPresent(
+        PullRequestMergeStrategy.self,
+        forKey: .pullRequestMergeStrategy
+      ) ?? Self.default.pullRequestMergeStrategy
   }
 }
