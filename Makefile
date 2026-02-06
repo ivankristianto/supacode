@@ -16,7 +16,7 @@ GHOSTTY_BUILD_OUTPUTS := $(GHOSTTY_XCFRAMEWORK_PATH) $(GHOSTTY_RESOURCE_PATH) $(
 VERSION ?=
 BUILD ?=
 .DEFAULT_GOAL := help
-.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources format lint check test update-wt bump-version bump-and-release install-git-hooks
+.PHONY: serve build-ghostty-xcframework build-app run-app install-dev-build sync-ghostty-resources format lint check test update-wt bump-version bump-and-release
 
 help:  # Display this help.
 	@-+echo "Run make with one of the following targets:"
