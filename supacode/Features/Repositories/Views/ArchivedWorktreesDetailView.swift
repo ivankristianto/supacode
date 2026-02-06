@@ -15,7 +15,7 @@ struct ArchivedWorktreesDetailView: View {
     } else {
       List {
         ForEach(groups, id: \.repository.id) { group in
-          Section(group.repository.name) {
+          Section {
             ForEach(group.worktrees) { worktree in
               ArchivedWorktreeRowView(
                 worktree: worktree,
@@ -28,9 +28,13 @@ struct ArchivedWorktreesDetailView: View {
                 }
               )
             }
+          } header: {
+            RepoHeaderRow(name: group.repository.name, isRemoving: false)
+              .textCase(nil)
           }
         }
       }
+      .listStyle(.sidebar)
     }
   }
 }

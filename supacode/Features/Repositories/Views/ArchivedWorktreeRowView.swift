@@ -7,52 +7,32 @@ struct ArchivedWorktreeRowView: View {
   let onDelete: () -> Void
 
   var body: some View {
-    let pullRequest = info?.pullRequest
-    let matchesWorktree =
-      if let pullRequest {
-        pullRequest.headRefName == nil || pullRequest.headRefName == worktree.name
-      } else {
-        false
-      }
-    let displayPullRequest = matchesWorktree ? pullRequest : nil
-    let pullRequestState = displayPullRequest?.state.uppercased()
-    let pullRequestNumber = displayPullRequest?.number
-    let pullRequestChecks = displayPullRequest?.statusCheckRollup?.checks ?? []
-    let pullRequestBadgeStyle = PullRequestBadgeStyle.style(
-      state: pullRequestState,
-      number: pullRequestNumber
+    let display = WorktreePullRequestDisplay(
+      worktreeName: worktree.name,
+      pullRequest: info?.pullRequest
     )
     let deleteShortcut = KeyboardShortcut(.delete, modifiers: [.command, .shift]).display
-    VStack(alignment: .leading) {
+    VStack(alignment: .leading, spacing: 6) {
       HStack(alignment: .firstTextBaseline) {
-        VStack(alignment: .leading) {
-          Text(worktree.name)
-            .font(.headline)
-          if !worktree.detail.isEmpty {
-            Text(worktree.detail)
-              .font(.subheadline)
-              .foregroundStyle(.secondary)
-              .monospaced()
-          }
-        }
+        Text(worktree.name)
+          .font(.headline)
         Spacer(minLength: 8)
-        if let pullRequestBadgeStyle, let displayPullRequest {
-          PullRequestChecksPopoverButton(
-            pullRequest: displayPullRequest
-          ) {
-            let breakdown = PullRequestCheckBreakdown(checks: pullRequestChecks)
-            let showsChecksRing = breakdown.total > 0 && pullRequestState != "MERGED"
-            HStack(spacing: 6) {
-              if showsChecksRing {
-                PullRequestChecksRingView(breakdown: breakdown)
-              }
-              PullRequestBadgeView(text: pullRequestBadgeStyle.text, color: pullRequestBadgeStyle.color)
-            }
-          }
+        WorktreePullRequestAccessoryView(display: display)
+      }
+      HStack(spacing: 8) {
+        if !worktree.detail.isEmpty {
+          Text(worktree.detail)
+            .foregroundStyle(.secondary)
+            .monospaced()
+        }
+        if let createdAt = worktree.createdAt {
+          Text("Created \(createdAt, style: .relative)")
+            .foregroundStyle(.secondary)
         }
       }
-      HStack {
-        Button("Unarchive") {
+      .font(.caption)
+      HStack(spacing: 12) {
+        Button("Unarchive", systemImage: "tray.and.arrow.up") {
           onUnarchive()
         }
         .help("Unarchive worktree")
@@ -61,6 +41,7 @@ struct ArchivedWorktreeRowView: View {
         }
         .help("Delete Worktree (\(deleteShortcut))")
       }
+      .font(.callout)
     }
   }
 }

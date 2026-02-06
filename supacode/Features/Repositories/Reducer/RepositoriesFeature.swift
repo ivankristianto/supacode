@@ -2211,7 +2211,8 @@ private func updateWorktreeName(
       name: name,
       detail: worktree.detail,
       workingDirectory: worktree.workingDirectory,
-      repositoryRootURL: worktree.repositoryRootURL
+      repositoryRootURL: worktree.repositoryRootURL,
+      createdAt: worktree.createdAt
     )
     repository = Repository(
       id: repository.id,

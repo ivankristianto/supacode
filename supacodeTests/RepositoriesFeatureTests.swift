@@ -170,6 +170,31 @@ struct RepositoriesFeatureTests {
     }
   }
 
+  @Test func worktreeBranchNameLoadedPreservesCreatedAt() async {
+    let createdAt = Date(timeIntervalSince1970: 1_737_303_600)
+    let worktree = makeWorktree(id: "/tmp/wt", name: "eagle", createdAt: createdAt)
+    let renamedWorktree = makeWorktree(id: "/tmp/wt", name: "falcon", createdAt: createdAt)
+    let repository = makeRepository(id: "/tmp/repo", worktrees: [worktree])
+    let store = TestStore(initialState: makeState(repositories: [repository])) {
+      RepositoriesFeature()
+    }
+
+    await store.send(.worktreeBranchNameLoaded(worktreeID: worktree.id, name: "falcon")) {
+      var repository = $0.repositories[id: repository.id]!
+      var worktrees = repository.worktrees
+      worktrees[id: worktree.id] = renamedWorktree
+      repository = Repository(
+        id: repository.id,
+        rootURL: repository.rootURL,
+        name: repository.name,
+        worktrees: worktrees
+      )
+      $0.repositories[id: repository.id] = repository
+    }
+    #expect(store.state.repositories[id: repository.id]?.worktrees[id: worktree.id]?.name == "falcon")
+    #expect(store.state.repositories[id: repository.id]?.worktrees[id: worktree.id]?.createdAt == createdAt)
+  }
+
   @Test func orderedWorktreeRowsAreGlobal() {
     let repoA = makeRepository(
       id: "/tmp/repo-a",
@@ -632,13 +657,19 @@ struct RepositoriesFeatureTests {
     expectNoDifference(store.state.archivedWorktreeIDs, [])
   }
 
-  private func makeWorktree(id: String, name: String, repoRoot: String = "/tmp/repo") -> Worktree {
+  private func makeWorktree(
+    id: String,
+    name: String,
+    repoRoot: String = "/tmp/repo",
+    createdAt: Date? = nil
+  ) -> Worktree {
     Worktree(
       id: id,
       name: name,
       detail: "detail",
       workingDirectory: URL(fileURLWithPath: id),
-      repositoryRootURL: URL(fileURLWithPath: repoRoot)
+      repositoryRootURL: URL(fileURLWithPath: repoRoot),
+      createdAt: createdAt
     )
   }
 
