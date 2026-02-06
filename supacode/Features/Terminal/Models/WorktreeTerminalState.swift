@@ -1,17 +1,13 @@
+import AppKit
 import CoreGraphics
 import Foundation
 import GhosttyKit
-import OSLog
 import Observation
 import Sharing
 
 @MainActor
 @Observable
 final class WorktreeTerminalState {
-  private static let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier!,
-    category: "TerminalState"
-  )
   let tabManager: TerminalTabManager
   private let runtime: GhosttyRuntime
   private let worktree: Worktree
@@ -154,8 +150,6 @@ final class WorktreeTerminalState {
     let tabId = tabManager.createTab(title: title, icon: icon, isTitleLocked: isTitleLocked)
     let tree = splitTree(for: tabId, initialInput: initialInput)
     tabIsRunningById[tabId] = false
-    let surfaceId = tree.root?.leftmostLeaf().shortId ?? "nil"
-    Self.logger.debug("[createTab] tabId=\(String(tabId.rawValue.uuidString.prefix(6))) surface=\(surfaceId) focusing=\(focusing)")
     if focusing, let surface = tree.root?.leftmostLeaf() {
       focusSurface(surface, in: tabId)
     }
@@ -164,18 +158,13 @@ final class WorktreeTerminalState {
   }
 
   func selectTab(_ tabId: TerminalTabID) {
-    Self.logger.debug("[selectTab] tabId=\(String(tabId.rawValue.uuidString.prefix(6)))")
     tabManager.selectTab(tabId)
     focusSurface(in: tabId)
     emitTaskStatusIfChanged()
   }
 
   func focusSelectedTab() {
-    guard let tabId = tabManager.selectedTabId else {
-      Self.logger.debug("[focusSelectedTab] no selectedTabId")
-      return
-    }
-    Self.logger.debug("[focusSelectedTab] tabId=\(String(tabId.rawValue.uuidString.prefix(6)))")
+    guard let tabId = tabManager.selectedTabId else { return }
     focusSurface(in: tabId)
   }
 
@@ -190,19 +179,20 @@ final class WorktreeTerminalState {
 
   func syncFocus(windowIsKey: Bool) {
     let selectedTabId = tabManager.selectedTabId
-    Self.logger.debug(
-      "[syncFocus] windowIsKey=\(windowIsKey) selectedTabId=\(selectedTabId.map { String($0.rawValue.uuidString.prefix(6)) } ?? "nil")"
-    )
+    var surfaceToFocus: GhosttySurfaceView?
     for (tabId, tree) in trees {
       let focusedId = focusedSurfaceIdByTab[tabId]
       let shouldFocusTab = windowIsKey && tabId == selectedTabId
       for surface in tree.leaves() {
         let isFocused = shouldFocusTab && surface.id == focusedId
-        Self.logger.debug(
-          "[syncFocus]   tab=\(String(tabId.rawValue.uuidString.prefix(6))) surface=\(surface.shortId) shouldFocusTab=\(shouldFocusTab) isFocused=\(isFocused)"
-        )
         surface.focusDidChange(isFocused)
+        if isFocused {
+          surfaceToFocus = surface
+        }
       }
+    }
+    if let surfaceToFocus {
+      surfaceToFocus.window?.makeFirstResponder(surfaceToFocus)
     }
   }
 
@@ -525,9 +515,6 @@ final class WorktreeTerminalState {
     }
     view.onFocusChange = { [weak self, weak view] focused in
       guard let self, let view, focused else { return }
-      Self.logger.debug(
-        "[onFocusChange] surface=\(view.shortId) tabId=\(String(tabId.rawValue.uuidString.prefix(6))) focused=\(focused) selectedTabId=\(self.tabManager.selectedTabId.map { String($0.rawValue.uuidString.prefix(6)) } ?? "nil")"
-      )
       self.focusedSurfaceIdByTab[tabId] = view.id
       self.updateTabTitle(for: tabId)
       self.emitFocusChangedIfNeeded(view.id)
@@ -547,13 +534,11 @@ final class WorktreeTerminalState {
 
   private func focusSurface(in tabId: TerminalTabID) {
     if let focusedId = focusedSurfaceIdByTab[tabId], let surface = surfaces[focusedId] {
-      Self.logger.debug("[focusSurface(in:)] tabId=\(String(tabId.rawValue.uuidString.prefix(6))) surface=\(surface.shortId) (from cache)")
       focusSurface(surface, in: tabId)
       return
     }
     let tree = splitTree(for: tabId)
     if let surface = tree.root?.leftmostLeaf() {
-      Self.logger.debug("[focusSurface(in:)] tabId=\(String(tabId.rawValue.uuidString.prefix(6))) surface=\(surface.shortId) (leftmostLeaf)")
       focusSurface(surface, in: tabId)
     }
   }
@@ -562,11 +547,7 @@ final class WorktreeTerminalState {
     let previousSurface = focusedSurfaceIdByTab[tabId].flatMap { surfaces[$0] }
     focusedSurfaceIdByTab[tabId] = surface.id
     updateTabTitle(for: tabId)
-    let isSelectedTab = tabId == tabManager.selectedTabId
-    Self.logger.debug(
-      "[focusSurface(_:in:)] tabId=\(String(tabId.rawValue.uuidString.prefix(6))) surface=\(surface.shortId) prev=\(previousSurface?.shortId ?? "nil") isSelectedTab=\(isSelectedTab)"
-    )
-    guard isSelectedTab else { return }
+    guard tabId == tabManager.selectedTabId else { return }
     let fromSurface = (previousSurface === surface) ? nil : previousSurface
     GhosttySurfaceView.moveFocus(to: surface, from: fromSurface)
     emitFocusChangedIfNeeded(surface.id)
