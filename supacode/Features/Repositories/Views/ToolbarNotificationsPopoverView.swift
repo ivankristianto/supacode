@@ -25,7 +25,6 @@ struct ToolbarNotificationsPopoverView: View {
           Button("Dismiss All") {
             onDismissAll()
           }
-          .buttonStyle(.plain)
           .disabled(notificationCount == 0)
           .help("Dismiss all notifications")
         }
