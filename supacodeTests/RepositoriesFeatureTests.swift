@@ -88,7 +88,6 @@ struct RepositoriesFeatureTests {
       $0.alert = expectedAlert
     }
   }
-
   @Test func requestDeleteWorktreesShowsBatchConfirmation() async {
     let worktree1 = makeWorktree(id: "/tmp/repo/wt1", name: "owl", repoRoot: "/tmp/repo")
     let worktree2 = makeWorktree(id: "/tmp/repo/wt2", name: "hawk", repoRoot: "/tmp/repo")
