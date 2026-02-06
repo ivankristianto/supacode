@@ -22,6 +22,10 @@ struct WorktreeDetailView: View {
       !state.selectedRunScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     let runScriptEnabled = hasActiveWorktree && runScriptConfigured
     let runScriptIsRunning = selectedWorktree.flatMap { state.runScriptStatusByWorktreeID[$0.id] } == true
+    let notificationGroups = repositories.toolbarNotificationGroups(terminalManager: terminalManager)
+    let unseenNotificationWorktreeCount = notificationGroups.reduce(0) { count, repository in
+      count + repository.unseenWorktreeCount
+    }
     let content = Group {
       if repositories.isShowingArchivedWorktrees {
         ArchivedWorktreesDetailView(
@@ -64,6 +68,8 @@ struct WorktreeDetailView: View {
           branchName: selectedWorktree.name,
           statusToast: repositories.statusToast,
           pullRequest: matchesBranch ? pullRequest : nil,
+          notificationGroups: notificationGroups,
+          unseenNotificationWorktreeCount: unseenNotificationWorktreeCount,
           openActionSelection: openActionSelection,
           showExtras: commandKeyObserver.isPressed,
           runScriptEnabled: runScriptEnabled,
@@ -84,7 +90,13 @@ struct WorktreeDetailView: View {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(selectedWorktree.workingDirectory.path, forType: .string)
           },
-          onNotificationTapped: { store.send(.repositories(.notificationToastTapped)) },
+          onSelectNotification: { worktreeID, surfaceID in
+            store.send(.repositories(.selectWorktree(worktreeID)))
+            terminalManager.stateIfExists(for: worktreeID)?.focusSurface(id: surfaceID)
+            if let worktree = repositories.worktree(for: worktreeID) {
+              terminalManager.clearNotificationIndicator(for: worktree)
+            }
+          },
           onRunScript: { store.send(.runScript) },
           onStopRunScript: { store.send(.stopRunScript) }
         )
@@ -157,6 +169,8 @@ struct WorktreeDetailView: View {
     let branchName: String
     let statusToast: RepositoriesFeature.StatusToast?
     let pullRequest: GithubPullRequest?
+    let notificationGroups: [ToolbarNotificationRepositoryGroup]
+    let unseenNotificationWorktreeCount: Int
     let openActionSelection: OpenWorktreeAction
     let showExtras: Bool
     let runScriptEnabled: Bool
@@ -177,7 +191,7 @@ struct WorktreeDetailView: View {
     let onOpenWorktree: (OpenWorktreeAction) -> Void
     let onOpenActionSelectionChanged: (OpenWorktreeAction) -> Void
     let onCopyPath: () -> Void
-    let onNotificationTapped: () -> Void
+    let onSelectNotification: (Worktree.ID, UUID) -> Void
     let onRunScript: () -> Void
     let onStopRunScript: () -> Void
 
@@ -194,10 +208,19 @@ struct WorktreeDetailView: View {
       ToolbarItemGroup {
         ToolbarStatusView(
           toast: toolbarState.statusToast,
-          pullRequest: toolbarState.pullRequest,
-          onNotificationTapped: onNotificationTapped
+          pullRequest: toolbarState.pullRequest
         )
         .padding(.horizontal)
+      }
+
+      if !toolbarState.notificationGroups.isEmpty {
+        ToolbarItem {
+          ToolbarNotificationsPopoverButton(
+            groups: toolbarState.notificationGroups,
+            unseenWorktreeCount: toolbarState.unseenNotificationWorktreeCount,
+            onSelectNotification: onSelectNotification
+          )
+        }
       }
 
       ToolbarSpacer(.flexible)
@@ -378,6 +401,8 @@ private struct WorktreeToolbarPreview: View {
       branchName: "feature/toolbar-preview",
       statusToast: nil,
       pullRequest: nil,
+      notificationGroups: [],
+      unseenNotificationWorktreeCount: 0,
       openActionSelection: .finder,
       showExtras: false,
       runScriptEnabled: true,
@@ -400,7 +425,7 @@ private struct WorktreeToolbarPreview: View {
         onOpenWorktree: { _ in },
         onOpenActionSelectionChanged: { _ in },
         onCopyPath: {},
-        onNotificationTapped: {},
+        onSelectNotification: { _, _ in },
         onRunScript: {},
         onStopRunScript: {}
       )
