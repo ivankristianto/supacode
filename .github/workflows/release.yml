@@ -75,6 +75,15 @@ jobs:
         run: |
           set -euo pipefail
           make build-ghostty-xcframework
+      - name: Inject secrets
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
+        run: |
+          sed -i '' "s|__SENTRY_DSN__|${SENTRY_DSN}|g" supacode/App/supacodeApp.swift
+          sed -i '' "s|__POSTHOG_API_KEY__|${POSTHOG_API_KEY}|g" supacode/App/supacodeApp.swift
+          sed -i '' "s|__POSTHOG_HOST__|${POSTHOG_HOST}|g" supacode/App/supacodeApp.swift
       - name: Archive Xcode project
         run: |
           set -o pipefail

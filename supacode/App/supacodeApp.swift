@@ -81,14 +81,14 @@ struct SupacodeApp: App {
     #if !DEBUG
       if initialSettings.crashReportsEnabled {
         SentrySDK.start { options in
-          options.dsn = "https://fb4d394e0bd3e72871b01c7ef3cac129@o1224589.ingest.us.sentry.io/4510770231050240"
+          options.dsn = "__SENTRY_DSN__"
           options.tracesSampleRate = 1.0
           options.enableAppHangTracking = false
         }
       }
       if initialSettings.analyticsEnabled {
-        let posthogAPIKey = "phc_3hNmki5nVyvW3o2GxqRB12cK7EKXOg2ehJLkCO3sL0S"
-        let posthogHost = "https://us.i.posthog.com"
+        let posthogAPIKey = "__POSTHOG_API_KEY__"
+        let posthogHost = "__POSTHOG_HOST__"
         let config = PostHogConfig(apiKey: posthogAPIKey, host: posthogHost)
         config.enableSwizzling = false
         PostHogSDK.shared.setup(config)
