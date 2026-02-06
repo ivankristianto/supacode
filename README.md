@@ -1,6 +1,6 @@
 # Supacode
 
-A macOS app for running multiple coding agents in parallel, powered by [GhosttyKit](https://github.com/ghostty-org/ghostty).
+A macOS app for running multiple coding agents in parallel, powered by [Ghostty](https://github.com/ghostty-org/ghostty).
 
 ## Requirements
 
@@ -23,6 +23,3 @@ make test      # Run tests
 make format    # Run swift-format
 ```
 
-## License
-
-Proprietary

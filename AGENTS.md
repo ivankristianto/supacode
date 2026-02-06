@@ -105,7 +105,6 @@ Always read `./docs/swift-rules.md` before writing Swift code. Key points:
 - Use Peekaboo skill to verify UI behavior if necessary
 - To inspect a Swift PM package, clone it with `gj get {git_url}`
 - Automatically commit your changes and your changes only. Do not use `git add .`
-- Never mention competitors or other apps in commits or PRs
 - Before you go on your task, check the current git branch name, if it's something generic like an animal name, name it accordingly. Do not do this for main branch
 - After implementing an execplan, always submit a PR if you're not in the main branch
 
