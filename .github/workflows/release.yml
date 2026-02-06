@@ -127,7 +127,7 @@ jobs:
           path: build/release-notes.md
 
   build:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: macos-26
     needs: [release_notes]
     permissions:
       contents: read
@@ -147,7 +147,7 @@ jobs:
         with:
           submodules: recursive
       - name: Mise cache
-        uses: ./.github/actions/shared-cache
+        uses: actions/cache@v4
         with:
           path: |
             ~/.local/share/mise
@@ -180,14 +180,14 @@ jobs:
           security list-keychains -d user -s build.keychain $(security list-keychains -d user | tr -d '"')
           security default-keychain -s build.keychain
           security find-identity -v -p codesigning build.keychain
-          DEVELOPER_ID_IDENTITY_SHA=$(security find-identity -v -p codesigning build.keychain | rg "Developer ID Application" | head -1 | awk '{print $2}')
+          DEVELOPER_ID_IDENTITY_SHA=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | awk '{print $2}')
           if [ -z "$DEVELOPER_ID_IDENTITY_SHA" ]; then
             echo "::error::Developer ID Application identity not found in keychain"
             exit 1
           fi
           echo "DEVELOPER_ID_IDENTITY_SHA=$DEVELOPER_ID_IDENTITY_SHA" >> "$GITHUB_ENV"
       - name: Ghostty cache
-        uses: ./.github/actions/shared-cache
+        uses: actions/cache@v4
         with:
           path: |
             Frameworks/GhosttyKit.xcframework
@@ -249,11 +249,11 @@ jobs:
           codesign -f -s "$DEVELOPER_ID_IDENTITY_SHA" -o runtime --timestamp -v "$APP_PATH"
 
           codesign -vvv --deep --strict "$APP_PATH"
-          codesign -dv --verbose=4 "$APP_PATH" 2>&1 | rg "Authority=Developer ID Application|Timestamp="
-          codesign -dv --verbose=4 "$APP_PATH/Contents/MacOS/supacode" 2>&1 | rg "Authority=Developer ID Application|Timestamp="
-          codesign -dv --verbose=4 "$SPARKLE/Updater.app/Contents/MacOS/Updater" 2>&1 | rg "Authority=Developer ID Application|Timestamp="
-          codesign -dv --verbose=4 "$SPARKLE/XPCServices/Installer.xpc/Contents/MacOS/Installer" 2>&1 | rg "Authority=Developer ID Application|Timestamp="
-          codesign -dv --verbose=4 "$SPARKLE/XPCServices/Downloader.xpc/Contents/MacOS/Downloader" 2>&1 | rg "Authority=Developer ID Application|Timestamp="
+          codesign -dv --verbose=4 "$APP_PATH" 2>&1 | grep -E "Authority=Developer ID Application|Timestamp="
+          codesign -dv --verbose=4 "$APP_PATH/Contents/MacOS/supacode" 2>&1 | grep -E "Authority=Developer ID Application|Timestamp="
+          codesign -dv --verbose=4 "$SPARKLE/Updater.app/Contents/MacOS/Updater" 2>&1 | grep -E "Authority=Developer ID Application|Timestamp="
+          codesign -dv --verbose=4 "$SPARKLE/XPCServices/Installer.xpc/Contents/MacOS/Installer" 2>&1 | grep -E "Authority=Developer ID Application|Timestamp="
+          codesign -dv --verbose=4 "$SPARKLE/XPCServices/Downloader.xpc/Contents/MacOS/Downloader" 2>&1 | grep -E "Authority=Developer ID Application|Timestamp="
           echo "Signature verified successfully"
       - name: Notarize and staple
         run: |

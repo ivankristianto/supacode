@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: macos-26
     permissions:
       contents: read
     env:
@@ -26,7 +26,7 @@ jobs:
         with:
           submodules: recursive
       - name: Mise cache
-        uses: ./.github/actions/shared-cache
+        uses: actions/cache@v4
         with:
           path: |
             ~/.local/share/mise
@@ -50,14 +50,14 @@ jobs:
           security list-keychains -d user -s build.keychain $(security list-keychains -d user | tr -d '"')
           security default-keychain -s build.keychain
           security find-identity -v -p codesigning build.keychain
-          DEVELOPER_ID_IDENTITY_SHA=$(security find-identity -v -p codesigning build.keychain | rg "Developer ID Application" | head -1 | awk '{print $2}')
+          DEVELOPER_ID_IDENTITY_SHA=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | awk '{print $2}')
           if [ -z "$DEVELOPER_ID_IDENTITY_SHA" ]; then
             echo "::error::Developer ID Application identity not found in keychain"
             exit 1
           fi
           echo "DEVELOPER_ID_IDENTITY_SHA=$DEVELOPER_ID_IDENTITY_SHA" >> "$GITHUB_ENV"
       - name: Ghostty cache
-        uses: ./.github/actions/shared-cache
+        uses: actions/cache@v4
         with:
           path: |
             Frameworks/GhosttyKit.xcframework

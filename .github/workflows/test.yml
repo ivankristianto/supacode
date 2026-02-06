@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: macos-26
     env:
       MISE_HTTP_TIMEOUT: 120
       MISE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -21,7 +21,7 @@ jobs:
         with:
           submodules: recursive
       - name: Mise cache
-        uses: ./.github/actions/shared-cache
+        uses: actions/cache@v4
         with:
           path: |
             ~/.local/share/mise
@@ -37,7 +37,7 @@ jobs:
           GHOSTTY_SHA=$(git -C ThirdParty/ghostty rev-parse HEAD)
           printf '%s\n' "GHOSTTY_SHA=$GHOSTTY_SHA" >> "$GITHUB_ENV"
       - name: Ghostty cache
-        uses: ./.github/actions/shared-cache
+        uses: actions/cache@v4
         with:
           path: |
             Frameworks/GhosttyKit.xcframework
