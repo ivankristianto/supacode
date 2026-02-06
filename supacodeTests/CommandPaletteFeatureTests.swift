@@ -298,7 +298,7 @@ struct CommandPaletteFeatureTests {
     }
   }
 
-  @Test func queryMatchesGlobalItemsBeforeWorktrees() {
+  @Test func queryRanksByFuzzyScoreAcrossAllItems() {
     let openSettings = CommandPaletteItem(
       id: "global.open-settings",
       title: "Open Settings",
@@ -314,7 +314,7 @@ struct CommandPaletteFeatureTests {
 
     expectNoDifference(
       CommandPaletteFeature.filterItems(items: [selectSettings, openSettings], query: "set"),
-      [openSettings, selectSettings]
+      [selectSettings, openSettings]
     )
   }
 
