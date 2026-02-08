@@ -44,11 +44,15 @@ struct TerminalTabBarTrailingAccessories: View {
     .popover(
       isPresented: $isHoverPopoverPresented,
       attachmentAnchor: .point(.bottom),
-      arrowEdge: .top
+      arrowEdge: .bottom
     ) {
       hoverPopoverContent
         .onHover { hovering in
           isHoveringPopover = hovering
+          updateHoverPopoverVisibility()
+        }
+        .onDisappear {
+          isHoveringPopover = false
           updateHoverPopoverVisibility()
         }
     }
@@ -123,28 +127,32 @@ struct TerminalTabBarTrailingAccessories: View {
   }
 
   private func updateHoverPopoverVisibility() {
-    if isHoveringButton || isHoveringPopover {
+    let isHoveringAny = isHoveringButton || isHoveringPopover
+    if isHoveringAny {
       closeTask?.cancel()
       closeTask = nil
+
       guard !isHoverPopoverPresented else { return }
       openTask?.cancel()
       openTask = Task { @MainActor in
+        // Intentional delay so clicks on + don't get interrupted by the hover UI.
         try? await Task.sleep(for: .milliseconds(250))
-        if isHoveringButton || isHoveringPopover {
-          isHoverPopoverPresented = true
-        }
+        guard isHoveringButton || isHoveringPopover else { return }
+        // Prevent showing while the user is in the middle of a click-drag/click-hold.
+        guard NSEvent.pressedMouseButtons == 0 else { return }
+        isHoverPopoverPresented = true
       }
     } else {
       openTask?.cancel()
       openTask = nil
 
-      // Avoid flicker when moving the cursor from the button into the popover.
+      guard isHoverPopoverPresented else { return }
       closeTask?.cancel()
       closeTask = Task { @MainActor in
-        try? await Task.sleep(for: .milliseconds(150))
-        if !isHoveringButton && !isHoveringPopover {
-          isHoverPopoverPresented = false
-        }
+        // Allow time to move from button into popover without it flashing closed.
+        try? await Task.sleep(for: .milliseconds(350))
+        guard !(isHoveringButton || isHoveringPopover) else { return }
+        isHoverPopoverPresented = false
       }
     }
   }
