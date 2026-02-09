@@ -53,6 +53,8 @@ final class GhosttySurfaceView: NSView, Identifiable {
   }
   var onFocusChange: ((Bool) -> Void)?
 
+  private var accessibilityPaneIndexHelp: String?
+
   private static let mouseCursorMap: [ghostty_action_mouse_shape_e: NSCursor] = [
     GHOSTTY_MOUSE_SHAPE_DEFAULT: .arrow,
     GHOSTTY_MOUSE_SHAPE_TEXT: .iBeam,
@@ -200,10 +202,49 @@ final class GhosttySurfaceView: NSView, Identifiable {
     }
   }
 
+  func setAccessibilityPaneIndex(index: Int, total: Int) {
+    guard total > 0, index > 0, index <= total else {
+      accessibilityPaneIndexHelp = nil
+      return
+    }
+    accessibilityPaneIndexHelp = "Pane \(index) of \(total)"
+  }
+
+  override func isAccessibilityElement() -> Bool {
+    // Avoid interacting with panes after teardown.
+    surface != nil
+  }
+
+  override func accessibilityRole() -> NSAccessibility.Role? {
+    // De facto role used by terminal emulators; AppKit doesn't provide a named constant for it.
+    NSAccessibility.Role(rawValue: "AXTerminal")
+  }
+
+  override func accessibilityLabel() -> String? {
+    let title = bridge.state.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if !title.isEmpty {
+      return title
+    }
+    let pwd = bridge.state.pwd?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if !pwd.isEmpty {
+      return pwd
+    }
+    return "Terminal pane"
+  }
+
+  override func accessibilityValue() -> Any? {
+    bridge.state.pwd
+  }
+
+  override func accessibilityHelp() -> String? {
+    accessibilityPaneIndexHelp
+  }
+
   override func becomeFirstResponder() -> Bool {
     let result = super.becomeFirstResponder()
     if result {
       focusDidChange(true)
+      postAccessibilityFocusChanged()
     }
     return result
   }
@@ -214,6 +255,16 @@ final class GhosttySurfaceView: NSView, Identifiable {
       focusDidChange(false)
     }
     return result
+  }
+
+  private func postAccessibilityFocusChanged() {
+    guard surface != nil else { return }
+    // Post on the window so assistive tech can query the focused element from it.
+    if let window {
+      NSAccessibility.post(element: window, notification: .focusedUIElementChanged)
+    } else {
+      NSAccessibility.post(element: self, notification: .focusedUIElementChanged)
+    }
   }
 
   override func keyDown(with event: NSEvent) {
