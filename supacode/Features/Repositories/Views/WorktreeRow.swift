@@ -88,6 +88,7 @@ struct WorktreeRow: View {
             pinAction?()
           } label: {
             Image(systemName: isPinned ? "pin.slash" : "pin")
+              .contentTransition(.symbolEffect(.replace))
               .accessibilityLabel(isPinned ? "Unpin worktree" : "Pin worktree")
           }
           .buttonStyle(.plain)

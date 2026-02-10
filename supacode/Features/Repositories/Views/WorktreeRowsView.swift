@@ -259,10 +259,12 @@ struct WorktreeRowsView: View {
   }
 
   private func togglePin(for worktreeID: Worktree.ID, isPinned: Bool) {
-    if isPinned {
-      store.send(.unpinWorktree(worktreeID))
-    } else {
-      store.send(.pinWorktree(worktreeID))
+    withAnimation(.easeOut(duration: 0.2)) {
+      if isPinned {
+        store.send(.unpinWorktree(worktreeID))
+      } else {
+        store.send(.pinWorktree(worktreeID))
+      }
     }
   }
 
