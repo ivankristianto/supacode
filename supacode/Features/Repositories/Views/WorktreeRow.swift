@@ -34,7 +34,6 @@ struct WorktreeRow: View {
     let showsPullRequestTag = !showsMergedArchiveAction
       && display.pullRequest != nil
       && display.pullRequestBadgeStyle != nil
-    let showsInfo = showsPullRequestTag || mergeReadiness != nil
     let nameColor = colorScheme == .dark ? Color.white : Color.primary
     VStack(alignment: .leading, spacing: 2) {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -69,6 +68,7 @@ struct WorktreeRow: View {
         Text(name)
           .font(.body)
           .foregroundStyle(nameColor)
+          .lineLimit(1)
         Spacer(minLength: 8)
         if isRunScriptRunning {
           Image(systemName: "play.fill")
@@ -93,20 +93,16 @@ struct WorktreeRow: View {
           .buttonStyle(.plain)
           .help("Archive Worktree (\(archiveShortcut))")
         }
-        if let shortcutHint {
-          ShortcutHintView(text: shortcutHint, color: .secondary)
-        }
       }
-      if showsInfo {
-        WorktreeRowInfoView(
-          display: display,
-          showsPullRequestTag: showsPullRequestTag,
-          mergeReadiness: mergeReadiness
-        )
-        .padding(.leading, 24)
-      }
+      WorktreeRowInfoView(
+        display: display,
+        showsPullRequestTag: showsPullRequestTag,
+        mergeReadiness: mergeReadiness,
+        shortcutHint: shortcutHint
+      )
+      .padding(.leading, 24)
     }
-    .padding(.vertical, 12)
+    .frame(height: worktreeRowHeight, alignment: .center)
     .overlay(alignment: .bottomLeading) {
       if showsBottomDivider {
         Rectangle()
@@ -129,25 +125,38 @@ struct WorktreeRow: View {
   private var bodyFont: NSFont {
     NSFont.preferredFont(forTextStyle: .body)
   }
+
+  private var worktreeRowHeight: CGFloat {
+    56
+  }
 }
 
 private struct WorktreeRowInfoView: View {
   let display: WorktreePullRequestDisplay
   let showsPullRequestTag: Bool
   let mergeReadiness: PullRequestMergeReadiness?
+  let shortcutHint: String?
 
   var body: some View {
     HStack(spacing: 6) {
-      if showsPullRequestTag {
-        WorktreePullRequestAccessoryView(display: display)
-      }
-      if let mergeReadiness {
+      HStack(spacing: 6) {
         if showsPullRequestTag {
-          Text("•")
-            .foregroundStyle(.secondary)
+          WorktreePullRequestAccessoryView(display: display)
         }
-        Text(mergeReadiness.label)
-          .foregroundStyle(mergeReadiness.isBlocking ? .red : .green)
+        if showsPullRequestTag {
+          if mergeReadiness != nil {
+            Text("•")
+              .foregroundStyle(.secondary)
+          }
+        }
+        if let mergeReadiness {
+          Text(mergeReadiness.label)
+            .foregroundStyle(mergeReadiness.isBlocking ? .red : .green)
+        }
+      }
+      Spacer(minLength: 0)
+      if let shortcutHint {
+        ShortcutHintView(text: shortcutHint, color: .secondary)
       }
     }
     .font(.caption)
