@@ -42,17 +42,20 @@ struct SidebarListView: View {
     let repositoriesByID = Dictionary(uniqueKeysWithValues: store.repositories.map { ($0.id, $0) })
     List(selection: selection) {
       if orderedRoots.isEmpty {
-        ForEach(store.repositories) { repository in
+        let repositories = store.repositories
+        ForEach(Array(repositories.enumerated()), id: \.element.id) { index, repository in
           RepositorySectionView(
             repository: repository,
+            showsTopSeparator: index > 0,
             isDragActive: isDragActive,
             expandedRepoIDs: $expandedRepoIDs,
             store: store,
             terminalManager: terminalManager
           )
+          .listRowInsets(EdgeInsets())
         }
       } else {
-        ForEach(orderedRoots, id: \.self) { rootURL in
+        ForEach(Array(orderedRoots.enumerated()), id: \.offset) { index, rootURL in
           let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
           if let failureMessage = state.loadFailuresByID[repositoryID] {
             let name = Repository.name(for: rootURL.standardizedFileURL)
@@ -68,14 +71,27 @@ struct SidebarListView: View {
                 store.send(.removeFailedRepository(repositoryID))
               }
             )
+            .padding(.horizontal, 12)
+            .overlay(alignment: .top) {
+              if index > 0 {
+                Rectangle()
+                  .fill(.secondary)
+                  .frame(height: 1)
+                  .frame(maxWidth: .infinity)
+                  .accessibilityHidden(true)
+              }
+            }
+            .listRowInsets(EdgeInsets())
           } else if let repository = repositoriesByID[repositoryID] {
             RepositorySectionView(
               repository: repository,
+              showsTopSeparator: index > 0,
               isDragActive: isDragActive,
               expandedRepoIDs: $expandedRepoIDs,
               store: store,
               terminalManager: terminalManager
             )
+            .listRowInsets(EdgeInsets())
           }
         }
         .onMove { offsets, destination in

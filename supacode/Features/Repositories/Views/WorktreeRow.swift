@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct WorktreeRow: View {
@@ -14,6 +15,7 @@ struct WorktreeRow: View {
   let onFocusNotification: (WorktreeTerminalNotification) -> Void
   let shortcutHint: String?
   let archiveAction: (() -> Void)?
+  let showsBottomDivider: Bool
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -26,75 +28,91 @@ struct WorktreeRow: View {
     let displayAddedLines = info?.addedLines
     let displayRemovedLines = info?.removedLines
     let mergeReadiness = pullRequestMergeReadiness(for: display.pullRequest)
-    let hasInfo = displayAddedLines != nil || displayRemovedLines != nil || mergeReadiness != nil
+    let hasChangeCounts = displayAddedLines != nil && displayRemovedLines != nil
     let archiveShortcut = KeyboardShortcut(.delete, modifiers: .command).display
     let showsMergedArchiveAction = display.pullRequestState == "MERGED" && archiveAction != nil
+    let showsPullRequestTag = !showsMergedArchiveAction
+      && display.pullRequest != nil
+      && display.pullRequestBadgeStyle != nil
+    let showsInfo = showsPullRequestTag || mergeReadiness != nil
     let nameColor = colorScheme == .dark ? Color.white : Color.primary
-    HStack(alignment: .center) {
-      ZStack {
-        if showsNotificationIndicator {
-          NotificationPopoverButton(
-            notifications: notifications,
-            onFocusNotification: onFocusNotification
-          ) {
-            Image(systemName: "bell.fill")
-              .font(.caption)
-              .foregroundStyle(.orange)
-              .accessibilityLabel("Unread notifications")
-          }
-          .opacity(showsSpinner ? 0 : 1)
-        } else {
-          Image(systemName: branchIconName)
-            .font(.caption)
-            .foregroundStyle(.secondary)
+    VStack(alignment: .leading, spacing: 2) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        ZStack {
+          if showsNotificationIndicator {
+            NotificationPopoverButton(
+              notifications: notifications,
+              onFocusNotification: onFocusNotification
+            ) {
+              Image(systemName: "bell.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .accessibilityLabel("Unread notifications")
+            }
             .opacity(showsSpinner ? 0 : 1)
-            .accessibilityHidden(true)
+          } else {
+            Image(systemName: branchIconName)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .opacity(showsSpinner ? 0 : 1)
+              .accessibilityHidden(true)
+          }
+          if showsSpinner {
+            ProgressView()
+              .controlSize(.small)
+          }
         }
-        if showsSpinner {
-          ProgressView()
-            .controlSize(.small)
+        .frame(width: 16, height: 16)
+        .alignmentGuide(.firstTextBaseline) { _ in
+          bodyFont.ascender
         }
-      }
-      .frame(width: 16, height: 16)
-      if hasInfo {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(name)
-            .font(.body)
-            .foregroundStyle(nameColor)
-          WorktreeRowInfoView(
-            addedLines: displayAddedLines,
-            removedLines: displayRemovedLines,
-            mergeReadiness: mergeReadiness
-          )
-        }
-      } else {
         Text(name)
           .font(.body)
           .foregroundStyle(nameColor)
-      }
-      Spacer(minLength: 8)
-      if isRunScriptRunning {
-        Image(systemName: "play.fill")
-          .font(.caption)
-          .foregroundStyle(.green)
-          .help("Run script active")
-          .accessibilityLabel("Run script active")
-      }
-      if !showsMergedArchiveAction {
-        WorktreePullRequestAccessoryView(display: display)
-      }
-      if let archiveAction, display.pullRequestState == "MERGED" {
-        Button {
-          archiveAction()
-        } label: {
-          Image(systemName: "archivebox")
-            .accessibilityLabel("Archive worktree")
+        Spacer(minLength: 8)
+        if isRunScriptRunning {
+          Image(systemName: "play.fill")
+            .font(.caption)
+            .foregroundStyle(.green)
+            .help("Run script active")
+            .accessibilityLabel("Run script active")
         }
-        .buttonStyle(.plain)
-        .help("Archive Worktree (\(archiveShortcut))")
+        if hasChangeCounts, let displayAddedLines, let displayRemovedLines {
+          WorktreeRowChangeCountView(
+            addedLines: displayAddedLines,
+            removedLines: displayRemovedLines
+          )
+        }
+        if let archiveAction, display.pullRequestState == "MERGED" {
+          Button {
+            archiveAction()
+          } label: {
+            Image(systemName: "archivebox")
+              .accessibilityLabel("Archive worktree")
+          }
+          .buttonStyle(.plain)
+          .help("Archive Worktree (\(archiveShortcut))")
+        }
+        if let shortcutHint {
+          ShortcutHintView(text: shortcutHint, color: .secondary)
+        }
       }
-      if let shortcutHint {
-        ShortcutHintView(text: shortcutHint, color: .secondary)
+      if showsInfo {
+        WorktreeRowInfoView(
+          display: display,
+          showsPullRequestTag: showsPullRequestTag,
+          mergeReadiness: mergeReadiness
+        )
+        .padding(.leading, 24)
+      }
+    }
+    .padding(.vertical, 12)
+    .overlay(alignment: .bottomLeading) {
+      if showsBottomDivider {
+        Rectangle()
+          .fill(.separator)
+          .frame(height: 0.5)
+          .padding(.leading, 24)
       }
     }
   }
@@ -107,23 +125,24 @@ struct WorktreeRow: View {
     }
     return PullRequestMergeReadiness(pullRequest: pullRequest)
   }
+
+  private var bodyFont: NSFont {
+    NSFont.preferredFont(forTextStyle: .body)
+  }
 }
 
 private struct WorktreeRowInfoView: View {
-  let addedLines: Int?
-  let removedLines: Int?
+  let display: WorktreePullRequestDisplay
+  let showsPullRequestTag: Bool
   let mergeReadiness: PullRequestMergeReadiness?
 
   var body: some View {
-    HStack {
-      if let addedLines, let removedLines {
-        Text("+\(addedLines)")
-          .foregroundStyle(.green)
-        Text("-\(removedLines)")
-          .foregroundStyle(.red)
+    HStack(spacing: 6) {
+      if showsPullRequestTag {
+        WorktreePullRequestAccessoryView(display: display)
       }
       if let mergeReadiness {
-        if addedLines != nil && removedLines != nil {
+        if showsPullRequestTag {
           Text("•")
             .foregroundStyle(.secondary)
         }
@@ -134,5 +153,28 @@ private struct WorktreeRowInfoView: View {
     .font(.caption)
     .lineLimit(1)
     .frame(minHeight: 14)
+  }
+}
+
+private struct WorktreeRowChangeCountView: View {
+  let addedLines: Int
+  let removedLines: Int
+
+  var body: some View {
+    HStack(spacing: 4) {
+      Text("+\(addedLines)")
+        .foregroundStyle(.green)
+      Text("-\(removedLines)")
+        .foregroundStyle(.red)
+    }
+    .font(.caption)
+    .lineLimit(1)
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .overlay {
+      RoundedRectangle(cornerRadius: 4, style: .continuous)
+        .stroke(.tertiary, lineWidth: 1)
+    }
+    .monospacedDigit()
   }
 }

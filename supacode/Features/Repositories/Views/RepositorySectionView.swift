@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RepositorySectionView: View {
   let repository: Repository
+  let showsTopSeparator: Bool
   let isDragActive: Bool
   @Binding var expandedRepoIDs: Set<Repository.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
@@ -87,6 +88,17 @@ struct RepositorySectionView: View {
           .help(isExpanded ? "Collapse" : "Expand")
         }
       }
+      .frame(maxWidth: .infinity)
+      .frame(height: headerCellHeight, alignment: .center)
+      .overlay(alignment: .top) {
+        if showsTopSeparator {
+          Rectangle()
+            .fill(.secondary)
+            .frame(height: 1)
+            .frame(maxWidth: .infinity)
+            .accessibilityHidden(true)
+        }
+      }
       .onHover { isHovering = $0 }
       .contentShape(.rect)
       .contextMenu {
@@ -114,5 +126,9 @@ struct RepositorySectionView: View {
         )
       }
     }
+  }
+
+  private var headerCellHeight: CGFloat {
+    46
   }
 }
