@@ -196,21 +196,13 @@ struct WorktreeRowsView: View {
       onFocusNotification: config.onFocusNotification,
       shortcutHint: config.shortcutHint,
       pinAction: config.pinAction,
+      isSelected: isSelected,
       archiveAction: config.archiveAction
     )
     .tag(SidebarSelection.worktree(row.id))
     .typeSelectEquivalent("")
     .listRowInsets(EdgeInsets())
     .listRowSeparator(.hidden)
-    .listRowBackground(
-      Group {
-        if isSelected {
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(Color.gray.opacity(0.2))
-            .padding(.horizontal, 8)
-        }
-      }
-    )
     .transition(.opacity)
     .moveDisabled(config.moveDisabled)
   }
@@ -257,7 +249,7 @@ struct WorktreeRowsView: View {
   }
 
   private func togglePin(for worktreeID: Worktree.ID, isPinned: Bool) {
-    withAnimation(.easeOut(duration: 0.2)) {
+    _ = withAnimation(.easeOut(duration: 0.2)) {
       if isPinned {
         store.send(.unpinWorktree(worktreeID))
       } else {

@@ -17,6 +17,7 @@ struct WorktreeRow: View {
   let onFocusNotification: (WorktreeTerminalNotification) -> Void
   let shortcutHint: String?
   let pinAction: (() -> Void)?
+  let isSelected: Bool
   let archiveAction: (() -> Void)?
   @Environment(\.colorScheme) private var colorScheme
 
@@ -73,14 +74,15 @@ struct WorktreeRow: View {
         if isRunScriptRunning {
           Image(systemName: "play.fill")
             .font(.caption)
-            .foregroundStyle(.green)
+            .foregroundStyle(isSelected ? Color.primary : Color.green)
             .help("Run script active")
             .accessibilityLabel("Run script active")
         }
         if hasChangeCounts, let displayAddedLines, let displayRemovedLines {
           WorktreeRowChangeCountView(
             addedLines: displayAddedLines,
-            removedLines: displayRemovedLines
+            removedLines: displayRemovedLines,
+            isSelected: isSelected
           )
         }
         if isHovered {
@@ -180,13 +182,14 @@ private struct WorktreeRowInfoView: View {
 private struct WorktreeRowChangeCountView: View {
   let addedLines: Int
   let removedLines: Int
+  let isSelected: Bool
 
   var body: some View {
     HStack(spacing: 4) {
       Text("+\(addedLines)")
-        .foregroundStyle(.green)
+        .foregroundStyle(isSelected ? Color.primary : Color.green)
       Text("-\(removedLines)")
-        .foregroundStyle(.red)
+        .foregroundStyle(isSelected ? Color.primary : Color.red)
     }
     .font(.caption)
     .lineLimit(1)
@@ -194,7 +197,7 @@ private struct WorktreeRowChangeCountView: View {
     .padding(.vertical, 2)
     .overlay {
       RoundedRectangle(cornerRadius: 4, style: .continuous)
-        .stroke(.tertiary, lineWidth: 1)
+        .stroke(isSelected ? AnyShapeStyle(.primary.opacity(0.3)) : AnyShapeStyle(.tertiary), lineWidth: 1)
     }
     .monospacedDigit()
   }
