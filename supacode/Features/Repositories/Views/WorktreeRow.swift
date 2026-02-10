@@ -7,6 +7,7 @@ struct WorktreeRow: View {
   let info: WorktreeInfoEntry?
   let showsPullRequestInfo: Bool
   let isSelected: Bool
+  let isHovered: Bool
   let isPinned: Bool
   let isMainWorktree: Bool
   let isLoading: Bool
@@ -16,6 +17,7 @@ struct WorktreeRow: View {
   let notifications: [WorktreeTerminalNotification]
   let onFocusNotification: (WorktreeTerminalNotification) -> Void
   let shortcutHint: String?
+  let pinAction: (() -> Void)?
   let archiveAction: (() -> Void)?
   let showsBottomDivider: Bool
   @Environment(\.colorScheme) private var colorScheme
@@ -32,10 +34,7 @@ struct WorktreeRow: View {
     let mergeReadiness = pullRequestMergeReadiness(for: display.pullRequest)
     let hasChangeCounts = displayAddedLines != nil && displayRemovedLines != nil
     let archiveShortcut = KeyboardShortcut(.delete, modifiers: .command).display
-    let showsMergedArchiveAction = display.pullRequestState == "MERGED" && archiveAction != nil
-    let showsPullRequestTag = !showsMergedArchiveAction
-      && display.pullRequest != nil
-      && display.pullRequestBadgeStyle != nil
+    let showsPullRequestTag = display.pullRequest != nil && display.pullRequestBadgeStyle != nil
     let nameColor = colorScheme == .dark ? Color.white : Color.primary
     let detailText = worktreeName.isEmpty ? name : worktreeName
     VStack(alignment: .leading, spacing: 2) {
@@ -86,15 +85,25 @@ struct WorktreeRow: View {
             removedLines: displayRemovedLines
           )
         }
-        if let archiveAction, display.pullRequestState == "MERGED" {
+        if isHovered {
           Button {
-            archiveAction()
+            pinAction?()
+          } label: {
+            Image(systemName: isPinned ? "pin.slash" : "pin")
+              .accessibilityLabel(isPinned ? "Unpin worktree" : "Pin worktree")
+          }
+          .buttonStyle(.plain)
+          .help(isPinned ? "Unpin" : "Pin to top")
+          .disabled(pinAction == nil)
+          Button {
+            archiveAction?()
           } label: {
             Image(systemName: "archivebox")
               .accessibilityLabel("Archive worktree")
           }
           .buttonStyle(.plain)
           .help("Archive Worktree (\(archiveShortcut))")
+          .disabled(archiveAction == nil)
         }
       }
       WorktreeRowInfoView(
@@ -157,6 +166,8 @@ private struct WorktreeRowInfoView: View {
         .foregroundStyle(.secondary)
         .lineLimit(2)
         .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .layoutPriority(1)
       Spacer(minLength: 0)
       if let shortcutHint {
         ShortcutHintView(text: shortcutHint, color: .secondary)

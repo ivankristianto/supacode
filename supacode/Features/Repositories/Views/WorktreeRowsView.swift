@@ -10,6 +10,7 @@ struct WorktreeRowsView: View {
   @Environment(CommandKeyObserver.self) private var commandKeyObserver
   @Environment(\.colorScheme) private var colorScheme
   @State private var draggingWorktreeIDs: Set<Worktree.ID> = []
+  @State private var hoveredWorktreeID: Worktree.ID?
 
   var body: some View {
     if isExpanded {
@@ -101,9 +102,14 @@ struct WorktreeRowsView: View {
     let isSelected = row.id == store.state.selectedWorktreeID
     let showsNotificationIndicator = !isSelected && terminalManager.hasUnseenNotifications(for: row.id)
     let displayName = row.isDeleting ? "\(row.name) (deleting...)" : row.name
+    let canShowRowActions = row.isRemovable && !isRepositoryRemoving
+    let pinAction: (() -> Void)? =
+      canShowRowActions && !row.isMainWorktree
+      ? { togglePin(for: row.id, isPinned: row.isPinned) }
+      : nil
     let archiveAction: (() -> Void)? =
-      row.isRemovable && !row.isMainWorktree && !isRepositoryRemoving
-      ? { store.send(.requestArchiveWorktree(row.id, repository.id)) }
+      canShowRowActions && !row.isMainWorktree
+      ? { archiveWorktree(row.id) }
       : nil
     let notifications = terminalManager.stateIfExists(for: row.id)?.notifications ?? []
     let onFocusNotification: (WorktreeTerminalNotification) -> Void = { notification in
@@ -115,10 +121,12 @@ struct WorktreeRowsView: View {
     let config = WorktreeRowViewConfig(
       displayName: displayName,
       worktreeName: worktreeName(for: row),
+      isHovered: hoveredWorktreeID == row.id,
       showsNotificationIndicator: showsNotificationIndicator,
       notifications: notifications,
       onFocusNotification: onFocusNotification,
       shortcutHint: shortcutHint,
+      pinAction: pinAction,
       archiveAction: archiveAction,
       moveDisabled: moveDisabled,
       showsDivider: showsDivider
@@ -136,6 +144,13 @@ struct WorktreeRowsView: View {
     .contentShape(.dragPreview, .rect)
     .environment(\.colorScheme, colorScheme)
     .preferredColorScheme(colorScheme)
+    .onHover { hovering in
+      if hovering {
+        hoveredWorktreeID = row.id
+      } else if hoveredWorktreeID == row.id {
+        hoveredWorktreeID = nil
+      }
+    }
     .onDragSessionUpdated { session in
       let draggedIDs = Set(session.draggedItemIDs(for: Worktree.ID.self))
       if case .ended = session.phase {
@@ -159,10 +174,12 @@ struct WorktreeRowsView: View {
   private struct WorktreeRowViewConfig {
     let displayName: String
     let worktreeName: String
+    let isHovered: Bool
     let showsNotificationIndicator: Bool
     let notifications: [WorktreeTerminalNotification]
     let onFocusNotification: (WorktreeTerminalNotification) -> Void
     let shortcutHint: String?
+    let pinAction: (() -> Void)?
     let archiveAction: (() -> Void)?
     let moveDisabled: Bool
     let showsDivider: Bool
@@ -178,6 +195,7 @@ struct WorktreeRowsView: View {
       info: row.info,
       showsPullRequestInfo: !draggingWorktreeIDs.contains(row.id),
       isSelected: isSelected,
+      isHovered: config.isHovered,
       isPinned: row.isPinned,
       isMainWorktree: row.isMainWorktree,
       isLoading: row.isPending || row.isDeleting,
@@ -187,6 +205,7 @@ struct WorktreeRowsView: View {
       notifications: config.notifications,
       onFocusNotification: config.onFocusNotification,
       shortcutHint: config.shortcutHint,
+      pinAction: config.pinAction,
       archiveAction: config.archiveAction,
       showsBottomDivider: config.showsDivider
     )
@@ -205,12 +224,12 @@ struct WorktreeRowsView: View {
     if !row.isMainWorktree {
       if row.isPinned {
         Button("Unpin") {
-          store.send(.unpinWorktree(worktree.id))
+          togglePin(for: worktree.id, isPinned: true)
         }
         .help("Unpin")
       } else {
         Button("Pin to top") {
-          store.send(.pinWorktree(worktree.id))
+          togglePin(for: worktree.id, isPinned: false)
         }
         .help("Pin to top")
       }
@@ -220,7 +239,7 @@ struct WorktreeRowsView: View {
       NSPasteboard.general.setString(worktree.workingDirectory.path, forType: .string)
     }
     Button("Archive Worktree (\(archiveShortcut))") {
-      store.send(.requestArchiveWorktree(worktree.id, repository.id))
+      archiveWorktree(worktree.id)
     }
     .help(
       row.isMainWorktree
@@ -237,6 +256,18 @@ struct WorktreeRowsView: View {
   private func worktreeShortcutHint(for index: Int?) -> String? {
     guard let index, AppShortcuts.worktreeSelection.indices.contains(index) else { return nil }
     return AppShortcuts.worktreeSelection[index].display
+  }
+
+  private func togglePin(for worktreeID: Worktree.ID, isPinned: Bool) {
+    if isPinned {
+      store.send(.unpinWorktree(worktreeID))
+    } else {
+      store.send(.pinWorktree(worktreeID))
+    }
+  }
+
+  private func archiveWorktree(_ worktreeID: Worktree.ID) {
+    store.send(.requestArchiveWorktree(worktreeID, repository.id))
   }
 
   private func worktreeName(for row: WorktreeRowModel) -> String {
