@@ -213,13 +213,25 @@ final class GhosttyRuntime {
       if action.tag == GHOSTTY_ACTION_CONFIG_CHANGE {
         let config = action.action.config_change.config
         guard let clone = ghostty_config_clone(config) else { return false }
-        runtime.setConfig(clone)
-        runtime.onConfigChange?()
-        NotificationCenter.default.post(name: .ghosttyRuntimeConfigDidChange, object: runtime)
+        let work = {
+          runtime.setConfig(clone)
+          runtime.onConfigChange?()
+          NotificationCenter.default.post(name: .ghosttyRuntimeConfigDidChange, object: runtime)
+        }
+        if Thread.isMainThread {
+          work()
+        } else {
+          DispatchQueue.main.async { work() }
+        }
       }
       if action.tag == GHOSTTY_ACTION_RELOAD_CONFIG {
         let soft = action.action.reload_config.soft
-        runtime.reloadConfig(soft: soft, target: target)
+        let work = { runtime.reloadConfig(soft: soft, target: target) }
+        if Thread.isMainThread {
+          work()
+        } else {
+          DispatchQueue.main.async { work() }
+        }
       }
     }
     guard target.tag == GHOSTTY_TARGET_SURFACE else { return false }
@@ -239,12 +251,19 @@ final class GhosttyRuntime {
     location: ghostty_clipboard_e,
     state: UnsafeMutableRawPointer?
   ) {
-    guard let bridge = surfaceBridge(fromUserdata: userdata), let surface = bridge.surface else {
-      return
+    let work = {
+      guard let bridge = surfaceBridge(fromUserdata: userdata), let surface = bridge.surface else {
+        return
+      }
+      let value = NSPasteboard.ghostty(location)?.getOpinionatedStringContents() ?? ""
+      value.withCString { ptr in
+        ghostty_surface_complete_clipboard_request(surface, ptr, state, false)
+      }
     }
-    let value = NSPasteboard.ghostty(location)?.getOpinionatedStringContents() ?? ""
-    value.withCString { ptr in
-      ghostty_surface_complete_clipboard_request(surface, ptr, state, false)
+    if Thread.isMainThread {
+      work()
+    } else {
+      DispatchQueue.main.async { work() }
     }
   }
 
@@ -254,13 +273,20 @@ final class GhosttyRuntime {
     state: UnsafeMutableRawPointer?,
     request: ghostty_clipboard_request_e
   ) {
-    guard let bridge = surfaceBridge(fromUserdata: userdata), let surface = bridge.surface else {
-      return
-    }
     guard let string else { return }
     let value = String(cString: string)
-    value.withCString { ptr in
-      ghostty_surface_complete_clipboard_request(surface, ptr, state, true)
+    let work = {
+      guard let bridge = surfaceBridge(fromUserdata: userdata), let surface = bridge.surface else {
+        return
+      }
+      value.withCString { ptr in
+        ghostty_surface_complete_clipboard_request(surface, ptr, state, true)
+      }
+    }
+    if Thread.isMainThread {
+      work()
+    } else {
+      DispatchQueue.main.async { work() }
     }
   }
 
