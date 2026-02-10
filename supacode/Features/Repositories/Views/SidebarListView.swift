@@ -55,8 +55,17 @@ struct SidebarListView: View {
           .listRowInsets(EdgeInsets())
         }
       } else {
-        ForEach(Array(orderedRoots.enumerated()), id: \.offset) { index, rootURL in
-          let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
+        let orderedRows = Array(orderedRoots.enumerated()).map { index, rootURL in
+          (
+            index: index,
+            rootURL: rootURL,
+            repositoryID: rootURL.standardizedFileURL.path(percentEncoded: false)
+          )
+        }
+        ForEach(orderedRows, id: \.repositoryID) { row in
+          let index = row.index
+          let rootURL = row.rootURL
+          let repositoryID = row.repositoryID
           if let failureMessage = state.loadFailuresByID[repositoryID] {
             let name = Repository.name(for: rootURL.standardizedFileURL)
             let path = rootURL.standardizedFileURL.path(percentEncoded: false)
