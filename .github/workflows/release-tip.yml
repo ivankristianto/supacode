@@ -24,14 +24,15 @@ jobs:
     outputs:
       should_skip: ${{ steps.check.outputs.should_skip }}
     steps:
-      - name: Check if tip already points at this commit
+      - name: Check if tip release already exists for this commit
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TIP_SHA=$(gh api repos/${{ github.repository }}/git/ref/tags/tip --jq '.object.sha' 2>/dev/null || echo "")
-          if [ "$TIP_SHA" = "${{ github.sha }}" ]; then
-            echo "Tip already points at ${{ github.sha }}, skipping"
+          ASSET_COUNT=$(gh release view tip -R "${{ github.repository }}" --json assets --jq '.assets | length' 2>/dev/null || echo "0")
+          if [ "$TIP_SHA" = "${{ github.sha }}" ] && [ "$ASSET_COUNT" -gt 0 ]; then
+            echo "Tip already points at ${{ github.sha }} with $ASSET_COUNT assets, skipping"
             echo "should_skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_skip=false" >> "$GITHUB_OUTPUT"
