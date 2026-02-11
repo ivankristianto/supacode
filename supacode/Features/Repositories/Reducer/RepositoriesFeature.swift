@@ -416,30 +416,12 @@ struct RepositoriesFeature {
         return .send(.delegate(.selectedWorktreeChanged(selectedWorktree)))
 
       case .selectNextWorktree:
-        let rows = state.orderedWorktreeRows()
-        guard !rows.isEmpty else { return .none }
-        let nextID: Worktree.ID
-        if let currentID = state.selectedWorktreeID,
-          let currentIndex = rows.firstIndex(where: { $0.id == currentID })
-        {
-          nextID = rows[(currentIndex + 1) % rows.count].id
-        } else {
-          nextID = rows[0].id
-        }
-        return .send(.selectWorktree(nextID))
+        guard let id = state.worktreeID(byOffset: 1) else { return .none }
+        return .send(.selectWorktree(id))
 
       case .selectPreviousWorktree:
-        let rows = state.orderedWorktreeRows()
-        guard !rows.isEmpty else { return .none }
-        let previousID: Worktree.ID
-        if let currentID = state.selectedWorktreeID,
-          let currentIndex = rows.firstIndex(where: { $0.id == currentID })
-        {
-          previousID = rows[(currentIndex - 1 + rows.count) % rows.count].id
-        } else {
-          previousID = rows[rows.count - 1].id
-        }
-        return .send(.selectWorktree(previousID))
+        guard let id = state.worktreeID(byOffset: -1) else { return .none }
+        return .send(.selectWorktree(id))
 
       case .requestRenameBranch(let worktreeID, let branchName):
         guard let worktree = state.worktree(for: worktreeID) else { return .none }
@@ -1874,6 +1856,17 @@ struct RepositoriesFeature {
 extension RepositoriesFeature.State {
   var selectedWorktreeID: Worktree.ID? {
     selection?.worktreeID
+  }
+
+  func worktreeID(byOffset offset: Int) -> Worktree.ID? {
+    let rows = orderedWorktreeRows()
+    guard !rows.isEmpty else { return nil }
+    if let currentID = selectedWorktreeID,
+      let currentIndex = rows.firstIndex(where: { $0.id == currentID })
+    {
+      return rows[(currentIndex + offset + rows.count) % rows.count].id
+    }
+    return rows[offset > 0 ? 0 : rows.count - 1].id
   }
 
   var isShowingArchivedWorktrees: Bool {
