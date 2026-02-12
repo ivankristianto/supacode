@@ -817,10 +817,10 @@ struct RepositoriesFeatureTests {
   }
 
   @Test func selectNextWorktreeSingleWorktreeReturnsSame() async {
-    let wt = makeWorktree(id: "/tmp/wt", name: "solo")
-    let repository = makeRepository(id: "/tmp/repo", worktrees: [wt])
+    let worktree = makeWorktree(id: "/tmp/wt", name: "solo")
+    let repository = makeRepository(id: "/tmp/repo", worktrees: [worktree])
     var state = makeState(repositories: [repository])
-    state.selection = .worktree(wt.id)
+    state.selection = .worktree(worktree.id)
     let store = TestStore(initialState: state) {
       RepositoriesFeature()
     }
