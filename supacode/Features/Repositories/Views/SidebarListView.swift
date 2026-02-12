@@ -38,6 +38,7 @@ struct SidebarListView: View {
       }
     )
     let state = store.state
+    let hotkeyRows = state.orderedWorktreeRows(includingRepositoryIDs: expandedRepoIDs)
     let orderedRoots = state.orderedRepositoryRoots()
     let repositoriesByID = Dictionary(uniqueKeysWithValues: store.repositories.map { ($0.id, $0) })
     List(selection: selection) {
@@ -48,6 +49,7 @@ struct SidebarListView: View {
             repository: repository,
             showsTopSeparator: index > 0,
             isDragActive: isDragActive,
+            hotkeyRows: hotkeyRows,
             expandedRepoIDs: $expandedRepoIDs,
             store: store,
             terminalManager: terminalManager
@@ -96,6 +98,7 @@ struct SidebarListView: View {
               repository: repository,
               showsTopSeparator: index > 0,
               isDragActive: isDragActive,
+              hotkeyRows: hotkeyRows,
               expandedRepoIDs: $expandedRepoIDs,
               store: store,
               terminalManager: terminalManager

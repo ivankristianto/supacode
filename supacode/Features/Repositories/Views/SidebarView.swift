@@ -16,6 +16,7 @@ struct SidebarView: View {
 
   var body: some View {
     let state = store.state
+    let visibleHotkeyRows = state.orderedWorktreeRows(includingRepositoryIDs: expandedRepoIDs)
     let selectedRow = state.selectedRow(for: state.selectedWorktreeID)
     let confirmWorktreeAction: (() -> Void)? = {
       guard let alert = state.confirmWorktreeAlert else { return nil }
@@ -39,5 +40,6 @@ struct SidebarView: View {
       .focusedSceneValue(\.confirmWorktreeAction, confirmWorktreeAction)
       .focusedSceneValue(\.archiveWorktreeAction, archiveWorktreeAction)
       .focusedSceneValue(\.deleteWorktreeAction, deleteWorktreeAction)
+      .focusedSceneValue(\.visibleHotkeyWorktreeRows, visibleHotkeyRows)
   }
 }
