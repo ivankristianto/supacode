@@ -212,7 +212,7 @@ final class GhosttyRuntime {
     _ app: ghostty_app_t, target: ghostty_target_s, action: ghostty_action_s
   ) -> Bool {
     if let runtime = runtime(fromApp: app) {
-      if action.tag == GHOSTTY_ACTION_CONFIG_CHANGE {
+      if action.tag == GHOSTTY_ACTION_CONFIG_CHANGE, target.tag == GHOSTTY_TARGET_APP {
         let config = action.action.config_change.config
         guard let clone = ghostty_config_clone(config) else { return false }
         let work = {
