@@ -92,8 +92,7 @@ struct WorktreeRowsView: View {
     moveDisabled: Bool,
     shortcutHint: String?
   ) -> some View {
-    let isSelected = row.id == store.state.selectedWorktreeID
-    let showsNotificationIndicator = !isSelected && terminalManager.hasUnseenNotifications(for: row.id)
+    let showsNotificationIndicator = terminalManager.hasUnseenNotifications(for: row.id)
     let displayName = row.isDeleting ? "\(row.name) (deleting...)" : row.name
     let canShowRowActions = row.isRemovable && !isRepositoryRemoving
     let pinAction: (() -> Void)? =
