@@ -111,6 +111,7 @@ struct WorktreeRow: View {
         worktreeName: detailText,
         showsPullRequestTag: showsPullRequestTag,
         pullRequestNumber: display.pullRequest?.number,
+        pullRequestState: display.pullRequestState,
         mergeReadiness: mergeReadiness,
         isSelected: isSelected,
         shortcutHint: shortcutHint
@@ -144,6 +145,7 @@ private struct WorktreeRowInfoView: View {
   let worktreeName: String
   let showsPullRequestTag: Bool
   let pullRequestNumber: Int?
+  let pullRequestState: String?
   let mergeReadiness: PullRequestMergeReadiness?
   let isSelected: Bool
   let shortcutHint: String?
@@ -184,7 +186,12 @@ private struct WorktreeRowInfoView: View {
       segment.foregroundColor = .secondary
       result.append(segment)
     }
-    if let mergeReadiness {
+    if pullRequestState == "MERGED" {
+      appendSeparator()
+      var segment = AttributedString("Merged")
+      segment.foregroundColor = isSelected ? .secondary : PullRequestBadgeStyle.mergedColor
+      result.append(segment)
+    } else if let mergeReadiness {
       appendSeparator()
       var segment = AttributedString(mergeReadiness.label)
       segment.foregroundColor = isSelected ? .secondary : (mergeReadiness.isBlocking ? .red : .green)
