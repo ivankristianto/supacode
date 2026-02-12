@@ -296,4 +296,5 @@ jobs:
           stable_tree.write(out_path, xml_declaration=True, encoding='utf-8')
           PYEOF
 
-          gh release upload "$LATEST_TAG" merged_appcast.xml#appcast.xml --clobber -R "${{ github.repository }}"
+          mv merged_appcast.xml appcast.xml
+          gh release upload "$LATEST_TAG" appcast.xml --clobber -R "${{ github.repository }}"
