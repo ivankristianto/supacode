@@ -64,7 +64,12 @@ jobs:
       - name: Override build number for tip
         run: |
           BASE=$(awk -F' = ' '/CURRENT_PROJECT_VERSION = [0-9]+/{gsub(/;/,""); print $2; exit}' supacode.xcodeproj/project.pbxproj)
-          BUILD_NUMBER=$((BASE * 1000 + ${{ github.run_number }} % 999 + 1))
+          OFFSET=${{ github.run_number }}
+          if [ "$OFFSET" -gt 999 ]; then
+            echo "::error::Tip run_number ($OFFSET) exceeds 999. Bump CURRENT_PROJECT_VERSION before the next tip release."
+            exit 1
+          fi
+          BUILD_NUMBER=$((BASE * 1000 + OFFSET))
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER/g" supacode.xcodeproj/project.pbxproj
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
       - name: Setup keychain
