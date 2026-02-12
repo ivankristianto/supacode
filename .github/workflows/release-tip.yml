@@ -55,11 +55,17 @@ jobs:
       APPLE_NOTARIZATION_ISSUER: ${{ secrets.APPLE_NOTARIZATION_ISSUER }}
       APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
       APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
+      SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v6
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-macos
+      - name: Override build number to timestamp
+        run: |
+          BUILD_NUMBER=$(date -u +%Y%m%d%H%M)
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER/g" supacode.xcodeproj/project.pbxproj
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
       - name: Setup keychain
         run: |
           echo "$DEVELOPER_ID_CERT_P12" | base64 --decode > build-cert.p12
@@ -166,10 +172,26 @@ jobs:
 
           xcrun stapler staple build/supacode.dmg
           xcrun stapler staple "$APP_PATH"
+      - name: Create app zip for Sparkle
+        run: |
+          APP_PATH="$(find build/export -name "supacode.app" -maxdepth 3 -print -quit)"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" build/supacode.app.zip
+      - name: Generate tip appcast
+        run: |
+          STAGING=$(mktemp -d)
+          cp build/supacode.app.zip "$STAGING/"
+          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast \
+            --download-url-prefix "https://supacode.sh/download/tip/" \
+            --maximum-versions 1 \
+            --ed-key-file - "$STAGING"
+          cp "$STAGING/appcast.xml" build/appcast.xml
       - uses: actions/upload-artifact@v6
         with:
           name: build-artifacts
-          path: build/supacode.dmg
+          path: |
+            build/supacode.dmg
+            build/supacode.app.zip
+            build/appcast.xml
 
   tag:
     runs-on: ubuntu-latest
@@ -223,4 +245,4 @@ jobs:
         run: |
           gh release create tip --prerelease --title 'Supacode Tip ("Nightly")' --target "${{ github.sha }}" --notes "" -R "${{ github.repository }}" 2>/dev/null ||
           gh release edit tip --prerelease --title 'Supacode Tip ("Nightly")' --target "${{ github.sha }}" -R "${{ github.repository }}"
-          gh release upload tip build/supacode.dmg --clobber -R "${{ github.repository }}"
+          gh release upload tip build/supacode.dmg build/supacode.app.zip build/appcast.xml --clobber -R "${{ github.repository }}"

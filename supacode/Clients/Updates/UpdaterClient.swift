@@ -3,6 +3,7 @@ import Sparkle
 
 struct UpdaterClient {
   var configure: @MainActor @Sendable (_ checks: Bool, _ downloads: Bool, _ checkInBackground: Bool) -> Void
+  var setFeedURL: @MainActor @Sendable (URL) -> Void
   var checkForUpdates: @MainActor @Sendable () -> Void
 }
 
@@ -23,6 +24,10 @@ extension UpdaterClient: DependencyKey {
           updater.checkForUpdatesInBackground()
         }
       },
+      setFeedURL: { url in
+        _ = controller
+        updater.setFeedURL(url)
+      },
       checkForUpdates: {
         _ = controller
         updater.checkForUpdates()
@@ -32,6 +37,7 @@ extension UpdaterClient: DependencyKey {
 
   static let testValue = UpdaterClient(
     configure: { _, _, _ in },
+    setFeedURL: { _ in },
     checkForUpdates: {}
   )
 }

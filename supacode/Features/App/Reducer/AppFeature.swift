@@ -278,6 +278,7 @@ struct AppFeature {
           .send(
             .updates(
               .applySettings(
+                updateChannel: settings.updateChannel,
                 automaticallyChecks: settings.updatesAutomaticallyCheckForUpdates,
                 automaticallyDownloads: settings.updatesAutomaticallyDownloadUpdates
               )
